@@ -1,0 +1,32 @@
+# Hydra target class
+_target_: uaug.episodes.agents.RandomQAgent
+
+# Agent name used in result files
+name: random_q
+
+# Template question bank, sampled in seeded random order (one per category axis)
+questions:
+  - "What are the main objects or subjects that should be in the image?"
+  - "What colors should the main elements be?"
+  - "How should the main elements be positioned relative to each other?"
+  - "What overall style or mood should the image have?"
+  - "How many of the main objects should there be?"
+  - "How should the scene be composed or framed?"
+  - "What should the background or setting look like?"
+  - "What material or texture details matter to you?"
+
+# How many questions to ask (null = keep asking until the budget runs out)
+n_questions: null
+
+# Seed for the per-request question order
+random_seed: ${general.random_seed}
+
+# Final-description composer (same as the other baselines)
+composer:
+  _target_: uaug.utils.wrappers.LanguageModel
+  system_prompt: ${prompt.compose_prompt}
+  input_schema:
+    _target_: uaug.episodes.schemas.compose_input_schema
+  output_schema:
+    _target_: uaug.episodes.schemas.compose_output_schema
+  api_call: ${llm}

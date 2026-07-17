@@ -1,0 +1,18 @@
+# Hydra target class
+_target_: uaug.episodes.agents.UpfrontAgent
+
+# Agent name used in result files
+name: upfront
+
+# The single broad question this baseline spends its first budget unit on
+question: "Before I make the image - are there any important details about the subjects, colors, layout, or style that you haven't mentioned yet?"
+
+# Final-description composer
+composer:
+  _target_: uaug.utils.wrappers.LanguageModel
+  system_prompt: ${prompt.compose_prompt}
+  input_schema:
+    _target_: uaug.episodes.schemas.compose_input_schema
+  output_schema:
+    _target_: uaug.episodes.schemas.compose_output_schema
+  api_call: ${llm}

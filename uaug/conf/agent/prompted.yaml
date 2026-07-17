@@ -1,0 +1,25 @@
+# Hydra target class
+_target_: uaug.episodes.agents.PromptedAskerAgent
+
+# Agent name used in result files
+name: prompted
+
+# Ask/stop decision model (one structured call per turn)
+asker:
+  _target_: uaug.utils.wrappers.LanguageModel
+  system_prompt: ${prompt.asker_prompt}
+  input_schema:
+    _target_: uaug.episodes.schemas.asker_input_schema
+  output_schema:
+    _target_: uaug.episodes.schemas.asker_output_schema
+  api_call: ${llm}
+
+# Final-description composer
+composer:
+  _target_: uaug.utils.wrappers.LanguageModel
+  system_prompt: ${prompt.compose_prompt}
+  input_schema:
+    _target_: uaug.episodes.schemas.compose_input_schema
+  output_schema:
+    _target_: uaug.episodes.schemas.compose_output_schema
+  api_call: ${llm}
