@@ -1,0 +1,15 @@
+# Hydra target class
+_target_: uaug.episodes.user.UserSimulator
+
+# User variant name (recorded in episode reports)
+name: concise
+
+# The answering model: holds the full spec, answers only what was asked, concisely
+model:
+  _target_: uaug.utils.wrappers.LanguageModel
+  system_prompt: ${prompt.user_prompt}
+  input_schema:
+    _target_: uaug.episodes.schemas.user_answer_input_schema
+  output_schema:
+    _target_: uaug.episodes.schemas.user_answer_output_schema
+  api_call: ${llm}
