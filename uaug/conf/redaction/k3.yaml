@@ -1,0 +1,4 @@
+# Number of details to redact per instance
+k: 3
+# Restrict redaction to these categories (null = sample across all categories)
+categories: null
