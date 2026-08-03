@@ -1,0 +1,49 @@
+##############################
+# Defaults
+##############################
+
+defaults:
+  - _self_
+  - synthesis: default
+  - episodes: default
+  - training: default
+  # LLM model used (e.g. gemini-3-flash, gpt-5-mini, etc.)
+  - llm: gemini-3-flash
+  # Dataset used (e.g. docci, designbench, etc.)
+  - dataset: docci
+  # Prompt set (all pipeline prompts live in one file)
+  - prompt: default
+  # Redaction scheme (e.g. k1, k3, k5)
+  - redaction: k3
+  # Agent policy for episodes (e.g. zeroq, prompted, upfront)
+  - agent: prompted
+  # User simulator behavior
+  - user: concise
+  # Rubric judge
+  - judge: default
+
+##############################
+# General Settings
+##############################
+
+general:
+  # Maximum number of parallel workers
+  max_workers: 8
+  # Random seed for reproducibility
+  random_seed: 42
+  # Abort any run whose accumulated API spend exceeds this (USD; null = unlimited)
+  max_usd: 30.0
+
+##############################
+# Logging Settings
+##############################
+
+logging:
+  # Base directory for writing log files
+  log_dir: ${hydra:runtime.cwd}/logs
+  # Base directory for writing run results (JSONLs, configs, reports)
+  results_dir: ${hydra:runtime.cwd}/results
+  # Disk cache for LLM calls (keyed by model+messages+params hash)
+  cache_dir: ${hydra:runtime.cwd}/cache
+  # Also log to console
+  console: false
