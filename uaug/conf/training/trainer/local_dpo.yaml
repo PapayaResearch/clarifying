@@ -1,0 +1,22 @@
+# Hydra target class (local GPU backend; pip install -e .[train_local] to fit)
+_target_: uaug.training.trainers.LocalDPOTrainer
+# Trainer name (used in logs)
+name: local_dpo
+# HF model id (or local path) to sample from and fine-tune
+base_model: Qwen/Qwen3-8B
+# Resume sampling/fitting from this checkpoint directory (null = base_model)
+checkpoint_path: null
+# LoRA rank
+lora_rank: 32
+# DPO learning rate
+learning_rate: 5e-6
+# DPO beta (KL strength)
+beta: 0.1
+# Minimum best-worst reward gap for a rollout group to yield a training pair
+min_reward_gap: 0.05
+# Max sampled tokens per agent turn
+max_new_tokens: 512
+# Sampling temperature during rollouts
+temperature: 1.0
+# Run the trl DPO fit at each save (false = only write dpo_pairs.jsonl)
+fit_on_save: false

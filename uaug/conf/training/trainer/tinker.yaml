@@ -1,0 +1,18 @@
+# Hydra target class (needs TINKER_API_KEY in .env; pip install -e .[train])
+_target_: uaug.training.trainers.TinkerTrainer
+# Trainer name (used in logs)
+name: tinker_pg
+# Tinker base model to attach LoRA to
+base_model: Qwen/Qwen3-8B
+# LoRA rank
+lora_rank: 32
+# Adam learning rate
+learning_rate: 1e-5
+# tinker-cookbook chat renderer matching the base model family; the
+# disable-thinking variant keeps <think> blocks out of the QUESTION:/FINAL:
+# action text and out of the sampled-token budget
+renderer_name: qwen3_disable_thinking
+# Max sampled tokens per agent turn
+max_tokens: 512
+# Sampling temperature during rollouts
+temperature: 1.0

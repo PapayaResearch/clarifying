@@ -1,0 +1,36 @@
+# Reward function and training backend are swappable config groups (settled design rule)
+defaults:
+  - reward: terminal_costed
+  - trainer: tinker
+  - _self_
+
+# Hydra target class
+_target_: uaug.training.pipeline.TrainingPipeline
+
+# Synthesis results directory holding instances.<split>.jsonl (use the -pruned one)
+instances_dir: null
+# Which split to train on
+split: train
+# Override the per-instance question budget (null = use instance.budget)
+budget_override: null
+
+# Number of trainer updates
+n_iterations: 40
+# Instances sampled per iteration
+instances_per_iteration: 8
+# Rollouts per instance (GRPO-style group; advantages are centered within the group)
+group_size: 8
+# Save a checkpoint every N iterations (the final iteration always saves)
+save_every: 10
+# Also divide group advantages by the group reward std
+normalize_advantages: false
+
+# System prompt for the trainable policy (QUESTION:/FINAL: action convention)
+policy_prompt: ${prompt.policy_prompt}
+# Seed for instance sampling
+random_seed: ${general.random_seed}
+
+# User simulator (selected via the user config group)
+user: ${user}
+# Rubric judge (selected via the judge config group)
+judge: ${judge}
