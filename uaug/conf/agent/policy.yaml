@@ -7,18 +7,7 @@ name: policy
 # System prompt for the policy (QUESTION:/FINAL: action convention)
 policy_prompt: ${prompt.policy_prompt}
 
-# The sampling policy behind the agent
-policy:
-  _target_: uaug.training.checkpoints.load_policy
-  # Which backend the checkpoint came from ("tinker" or "local")
-  backend: tinker
-  # Tinker state path or local checkpoint directory (set per run)
-  checkpoint: ???
-  # Base model the checkpoint was trained from (tokenizer/renderer source)
-  base_model: Qwen/Qwen3-8B
-  # tinker-cookbook chat renderer matching the base model family (must match training)
-  renderer_name: qwen3_disable_thinking
-  # Max sampled tokens per agent turn
-  max_tokens: 512
-  # Sampling temperature (0 = greedy, the eval default)
-  temperature: 0.0
+# The sampling policy behind the agent: the model group's ChatModel itself.
+# Set model.checkpoint to a trained checkpoint to evaluate it (null evaluates
+# the untrained base weights, e.g. as a control).
+policy: ${model}

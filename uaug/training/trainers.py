@@ -22,6 +22,15 @@ from uaug.training.policy import Completion, Policy
 from uaug.training.rollouts import Trajectory
 
 
+def resolve_renderer_name(renderer_name: Optional[str], base_model: str) -> str:
+    """null renderer_name -> the tinker-cookbook recommended renderer for the model."""
+    if renderer_name:
+        return renderer_name
+    from tinker_cookbook import model_info  # deferred: tinker backend only
+
+    return model_info.get_recommended_renderer_name(base_model)
+
+
 class Trainer(Protocol):
     name: str
 
@@ -84,7 +93,7 @@ class TinkerTrainer:
     base_model: str
     lora_rank: int
     learning_rate: float
-    renderer_name: str
+    renderer_name: Optional[str]
     max_tokens: int
     temperature: float
 
@@ -98,7 +107,9 @@ class TinkerTrainer:
             base_model=self.base_model, rank=self.lora_rank
         )
         tokenizer = self.training_client.get_tokenizer()
-        self.renderer = renderers.get_renderer(self.renderer_name, tokenizer)
+        self.renderer = renderers.get_renderer(
+            resolve_renderer_name(self.renderer_name, self.base_model), tokenizer
+        )
         self.sampling_params = tinker.types.SamplingParams(
             max_tokens=self.max_tokens,
             temperature=self.temperature,

@@ -12,7 +12,7 @@ asker:
     _target_: uaug.episodes.schemas.asker_input_schema
   output_schema:
     _target_: uaug.episodes.schemas.asker_output_schema
-  api_call: ${llm}
+  api_call: ${model}
 
 # Final-description composer
 composer:
@@ -22,4 +22,4 @@ composer:
     _target_: uaug.episodes.schemas.compose_input_schema
   output_schema:
     _target_: uaug.episodes.schemas.compose_output_schema
-  api_call: ${llm}
+  api_call: ${model}

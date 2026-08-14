@@ -2,10 +2,10 @@
 _target_: uaug.training.trainers.LocalDPOTrainer
 # Trainer name (used in logs)
 name: local_dpo
-# HF model id (or local path) to sample from and fine-tune
-base_model: Qwen/Qwen3-8B
+# HF model id (or local path) to sample from and fine-tune (from the model group)
+base_model: ${model.model_id}
 # Resume sampling/fitting from this checkpoint directory (null = base_model)
-checkpoint_path: null
+checkpoint_path: ${model.checkpoint}
 # LoRA rank
 lora_rank: 32
 # DPO learning rate
@@ -15,7 +15,7 @@ beta: 0.1
 # Minimum best-worst reward gap for a rollout group to yield a training pair
 min_reward_gap: 0.05
 # Max sampled tokens per agent turn
-max_new_tokens: 512
+max_new_tokens: ${model.max_tokens}
 # Sampling temperature during rollouts
 temperature: 1.0
 # Run the trl DPO fit at each save (false = only write dpo_pairs.jsonl)

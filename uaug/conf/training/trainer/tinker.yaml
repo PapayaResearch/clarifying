@@ -2,17 +2,15 @@
 _target_: uaug.training.trainers.TinkerTrainer
 # Trainer name (used in logs)
 name: tinker_pg
-# Tinker base model to attach LoRA to
-base_model: Qwen/Qwen3-8B
+# Tinker base model to attach LoRA to (from the model group; provider must be tinker)
+base_model: ${model.model_id}
 # LoRA rank
 lora_rank: 32
 # Adam learning rate
 learning_rate: 1e-5
-# tinker-cookbook chat renderer matching the base model family; the
-# disable-thinking variant keeps <think> blocks out of the QUESTION:/FINAL:
-# action text and out of the sampled-token budget
-renderer_name: qwen3_disable_thinking
+# tinker-cookbook chat renderer (from the model group; null = Tinker's recommended)
+renderer_name: ${model.renderer_name}
 # Max sampled tokens per agent turn
-max_tokens: 512
+max_tokens: ${model.max_tokens}
 # Sampling temperature during rollouts
 temperature: 1.0

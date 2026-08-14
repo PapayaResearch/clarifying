@@ -90,8 +90,8 @@ class RandomQAgent:
 
 @dataclasses.dataclass
 class PolicyAgent:
-    """A trained policy (Tinker or local checkpoint, via training.checkpoints.load_policy)
-    evaluated through the same episode loop as the prompted baselines. Speaks the
+    """The model group's ChatModel (base weights or a trained checkpoint) evaluated
+    through the same episode loop as the prompted baselines. Speaks the
     QUESTION:/FINAL: convention from training.policy."""
 
     name: str

@@ -26,7 +26,8 @@ def main(cfg: Config):
 
     # Set up logging
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    model_name = cfg.llm.model.replace("/", "_")
+    # Episodes are filed under the model under test (the orchestration llm is env-side)
+    model_name = cfg.model.name.replace("/", "_")
     log_dir = os.path.join(cfg.logging.log_dir, cfg.dataset.name, "episodes", model_name)
     log_file = os.path.join(log_dir, current_date + ".log")
     results_dir = os.path.join(cfg.logging.results_dir, cfg.dataset.name, "episodes", model_name, current_date)

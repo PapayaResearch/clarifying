@@ -12,4 +12,4 @@ composer:
     _target_: uaug.episodes.schemas.compose_input_schema
   output_schema:
     _target_: uaug.episodes.schemas.compose_output_schema
-  api_call: ${llm}
+  api_call: ${model}
