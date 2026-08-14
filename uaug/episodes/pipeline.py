@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from uaug.judging.judge import RubricJudge
 from uaug.schema import Episode, JudgeResult, TaskInstance, Turn
-from uaug.episodes.report import write_episodes_report
+from uaug.report.episodes import write_episodes_report
 from uaug.episodes.user import UserSimulator
 from uaug.utils.misc import bootstrap_ci, read_jsonl, write_jsonl
 

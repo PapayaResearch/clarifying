@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 from tqdm import tqdm
 
 from uaug.schema import DETAIL_CATEGORIES, Detail, TaskInstance
-from uaug.synthesis.report import write_html_report
+from uaug.report.synthesis import write_synthesis_report
 from uaug.utils.misc import read_jsonl, write_jsonl
 from uaug.utils.wrappers import LanguageModel
 
@@ -165,5 +165,5 @@ class SynthesisPipeline:
             json.dump(report, f, indent=2)
         logging.info("Synthesis report: %s", json.dumps(report))
 
-        write_html_report(os.path.join(results_dir, "report.html"), instances, report, n_examples=self.report_examples)
+        write_synthesis_report(os.path.join(results_dir, "report.html"), instances, report, n_examples=self.report_examples)
         logging.info("HTML report: %s", os.path.join(results_dir, "report.html"))

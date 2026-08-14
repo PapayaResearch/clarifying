@@ -1,8 +1,8 @@
 """Merge per-agent episode reports into one comparison table.
 
 Usage:
-    python -m uaug.analysis.compare results/docci/episodes/<model>            # newest run per agent
-    python -m uaug.analysis.compare <run_dir> <run_dir> ...                   # explicit run dirs
+    python -m uaug.report.compare results/docci/episodes/<model>             # newest run per agent
+    python -m uaug.report.compare <run_dir> <run_dir> ...                    # explicit run dirs
 """
 
 import argparse
