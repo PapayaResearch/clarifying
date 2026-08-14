@@ -1,0 +1,20 @@
+# Qwen3.5-9B (Alibaba): current-generation small dense model on the Tinker roster.
+
+# Hydra target class
+_target_: uaug.models.ChatModel
+# Display name (used in result/log paths)
+name: qwen3.5-9b
+# Serving backend: tinker (managed sampling + LoRA RL) or local (HF transformers)
+provider: tinker
+# Model identifier (HF model id)
+model_id: Qwen/Qwen3.5-9B
+# Fine-tuned checkpoint (Tinker sampler path or local dir; null = base weights)
+checkpoint: null
+# tinker-cookbook chat renderer (null = Tinker's recommended one for the model)
+renderer_name: null
+# Max sampled tokens per agent call
+max_tokens: 512
+# Sampling temperature for agent calls (0 = greedy; training rollouts use the trainer's)
+temperature: 0.0
+# Disk cache for chat calls (invalid structured outputs are never cached)
+cache_dir: ${logging.cache_dir}

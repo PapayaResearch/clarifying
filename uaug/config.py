@@ -18,6 +18,21 @@ class ApiCall:
 
 
 @dataclass
+class Model:
+    # The model under test (uaug.models.ChatModel): the conversation side of
+    # every agent - ${model} instantiates to the object itself (see conf/model/)
+    _target_: str
+    name: str
+    provider: str
+    model_id: str
+    checkpoint: Optional[str]
+    renderer_name: Optional[str]
+    max_tokens: int
+    temperature: float
+    cache_dir: Optional[str] = None
+
+
+@dataclass
 class SchemaFactory:
     _target_: str
 
@@ -165,6 +180,7 @@ class Training:
 @dataclass
 class Config:
     llm: ApiCall
+    model: Model
     dataset: Dataset
     prompt: Prompt
     redaction: Redaction

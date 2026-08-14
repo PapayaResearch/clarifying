@@ -7,8 +7,10 @@ defaults:
   - synthesis: default
   - episodes: default
   - training: default
-  # LLM model used (e.g. gemini-3-flash, gpt-5-mini, etc.)
+  # Orchestration LLM: environment roles only (synthesis, user simulator, judge)
   - llm: gemini-3-flash
+  # Model under test: holds the conversation for every agent (baselines, policy, trainer)
+  - model: qwen3-8b
   # Dataset used (e.g. docci, designbench, etc.)
   - dataset: docci
   # Prompt set (all pipeline prompts live in one file)
