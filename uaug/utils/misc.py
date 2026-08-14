@@ -1,10 +1,9 @@
 import dataclasses
 import json
 import random
-import re
 import statistics
 from pathlib import Path
-from typing import Any, Iterable, List, Optional
+from typing import Any, Iterable, List
 
 from omegaconf import DictConfig, OmegaConf
 from rich.box import ROUNDED
@@ -62,37 +61,3 @@ def bootstrap_ci(values: List[float], n_resamples: int = 1000, seed: int = 0) ->
     rng = random.Random(seed)
     means = sorted(statistics.mean(rng.choices(values, k=len(values))) for _ in range(n_resamples))
     return [round(means[int(0.025 * n_resamples)], 3), round(means[int(0.975 * n_resamples) - 1], 3)]
-
-
-def normalize_text(text: str) -> str:
-    """Lowercase, strip punctuation, and collapse whitespace for leakage/overlap checks."""
-    text = re.sub(r"[^\w\s]", " ", text.lower())
-    return re.sub(r"\s+", " ", text).strip()
-
-
-# Words too generic to count as evidence that a detail leaked into a prompt
-_STOPWORDS = frozenset(
-    "a an the of in on at to and or with is are was were be been its it this that there her his "
-    "image picture photo scene left right front back near next".split()
-)
-
-
-def content_words(text: str) -> set:
-    return {w for w in normalize_text(text).split() if w not in _STOPWORDS and len(w) > 2}
-
-
-def leakage_overlap(detail_text: str, prompt_text: str, reference_texts: Optional[List[str]] = None) -> float:
-    """Fraction of a detail's content words found in the prompt (1.0 = fully leaked).
-
-    With reference_texts (the kept details), only the detail's *novel* words count.
-    A detail with no novel words returns 0.0 - the inferability filter is the
-    semantic gate for those.
-    """
-    detail_words = content_words(detail_text)
-    if reference_texts:
-        for reference in reference_texts:
-            detail_words -= content_words(reference)
-    if not detail_words:
-        return 0.0
-    prompt_words = content_words(prompt_text)
-    return len(detail_words & prompt_words) / len(detail_words)

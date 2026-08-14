@@ -33,19 +33,6 @@ class ErodeOutput(IOSchema):
     request: str = Field(description="Natural 1-3 sentence user request containing only the given details.")
 
 
-class FilterInput(IOSchema):
-    """Input schema for the inferability filter."""
-    request: str = Field(description="The user's image-generation request.")
-    hidden_detail: str = Field(description="The hidden detail about the intended image, not stated in the request.")
-
-
-class FilterOutput(IOSchema):
-    """Output schema for the inferability filter."""
-    inferable: bool = Field(description="True if an image generated from the request alone would very likely satisfy the hidden detail.")
-    best_guess: str = Field(description="Most likely value/answer for the hidden detail given only the request.")
-    confidence: float = Field(ge=0.0, le=1.0, description="Probability that an image from the request alone satisfies the hidden detail.")
-
-
 # Zero-arg factories so Hydra can instantiate schema *classes* via _target_
 def decompose_input_schema() -> Type[IOSchema]:
     return DecomposeInput
@@ -61,11 +48,3 @@ def erode_input_schema() -> Type[IOSchema]:
 
 def erode_output_schema() -> Type[IOSchema]:
     return ErodeOutput
-
-
-def filter_input_schema() -> Type[IOSchema]:
-    return FilterInput
-
-
-def filter_output_schema() -> Type[IOSchema]:
-    return FilterOutput

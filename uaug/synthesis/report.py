@@ -138,7 +138,7 @@ def write_html_report(path: str, instances: List[TaskInstance], report: dict, n_
 <div class="wrap">
   <div class="eyebrow">uaug &middot; stage 1 &middot; data synthesis</div>
   <h1>Synthesis report: {n} instances from {n_sources} sources</h1>
-  <p class="sub">Pipeline: decompose &rarr; redact &rarr; erode &rarr; leakage + inferability gates with per-detail replacement.</p>
+  <p class="sub">Pipeline: decompose &rarr; redact &rarr; erode.</p>
   <div class="tiles">{tiles_html}</div>
   <div class="band">
     <div class="panel">

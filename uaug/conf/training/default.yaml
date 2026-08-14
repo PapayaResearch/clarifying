@@ -7,7 +7,7 @@ defaults:
 # Hydra target class
 _target_: uaug.training.pipeline.TrainingPipeline
 
-# Synthesis results directory holding instances.<split>.jsonl (use the -pruned one)
+# Synthesis results directory holding instances.<split>.jsonl
 instances_dir: null
 # Which split to train on
 split: train

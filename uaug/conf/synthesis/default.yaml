@@ -13,12 +13,6 @@ categories: ${redaction.categories}
 budget: 5
 # Drop sources whose decomposition yields fewer details than this
 min_details: 8
-# Rounds of replacing gate-failing redacted details before dropping the source
-max_redraws: 4
-# Redacted details inferable from the eroded prompt above this confidence get replaced
-filter_confidence_threshold: 0.6
-# Fraction of a redacted detail's content words allowed to appear in the eroded prompt
-leakage_threshold: 0.5
 # Example instances embedded in the run's HTML report
 report_examples: 4
 # Split fractions by source (assigned by seeded hash of source_id)
@@ -51,14 +45,4 @@ eroder:
     _target_: uaug.synthesis.schemas.erode_input_schema
   output_schema:
     _target_: uaug.synthesis.schemas.erode_output_schema
-  api_call: ${llm}
-
-# Inferability filter: is a redacted detail guessable from the eroded prompt alone?
-inferability_filter:
-  _target_: uaug.utils.wrappers.LanguageModel
-  system_prompt: ${prompt.filter_prompt}
-  input_schema:
-    _target_: uaug.synthesis.schemas.filter_input_schema
-  output_schema:
-    _target_: uaug.synthesis.schemas.filter_output_schema
   api_call: ${llm}

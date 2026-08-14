@@ -42,7 +42,7 @@ class TrainingPipeline:
 
     def _load_instances(self) -> List[TaskInstance]:
         if not self.instances_dir:
-            raise ValueError("training.instances_dir must point to a synthesis results directory (use the -pruned one)")
+            raise ValueError("training.instances_dir must point to a synthesis results directory")
         path = os.path.join(self.instances_dir, f"instances.{self.split}.jsonl")
         instances = [TaskInstance.from_dict(row) for row in read_jsonl(path)]
         logging.info("Loaded %d %s instances from %s", len(instances), self.split, path)

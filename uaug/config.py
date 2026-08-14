@@ -83,7 +83,6 @@ class Dataset:
 class Prompt:
     decompose_prompt: str
     erode_prompt: str
-    filter_prompt: str
     user_prompt: str
     asker_prompt: str
     compose_prompt: str
@@ -118,9 +117,6 @@ class Synthesis:
     categories: Optional[List[str]]
     budget: int
     min_details: int
-    max_redraws: int
-    filter_confidence_threshold: float
-    leakage_threshold: float
     report_examples: int
     split_fractions: Dict[str, float]
     random_seed: int
@@ -128,7 +124,6 @@ class Synthesis:
     resume_path: Optional[str]
     decomposer: LanguageModel
     eroder: LanguageModel
-    inferability_filter: LanguageModel
 
 
 ##############################

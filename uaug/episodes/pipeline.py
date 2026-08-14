@@ -111,9 +111,9 @@ class EpisodePipeline:
             "eps_e_hat_mean": round(statistics.mean(j.eps_e_hat for j in judgments), 3) if judgments else None,
             "preserved_mean": round(statistics.mean(preserved_values), 3) if preserved_values else None,
             "n_questions_mean": round(statistics.mean(e.n_questions for e in episodes), 2) if episodes else None,
-            # Planning gap vs. the construction-guaranteed lower bound k (meaningful
-            # on pruned instances, and only alongside u_rec - asking 0 questions has
-            # gap -k but recovers nothing)
+            # Planning gap vs. k, the number of redacted details (read alongside
+            # u_rec - asking 0 questions has gap -k but recovers nothing; some
+            # redacted details may be prior-inferable, see ZeroQ delivery rates)
             "k_mean": round(statistics.mean(k_by_instance[e.instance_id] for e in episodes), 2) if episodes else None,
             "planning_gap_mean": round(statistics.mean(e.n_questions - k_by_instance[e.instance_id] for e in episodes), 2) if episodes else None,
             "full_recovery_rate": round(sum(1 for j in judgments if j.u_rec > 0.999) / len(judgments), 3) if judgments else None,

@@ -31,15 +31,6 @@ erode_prompt: |
   - Keep the user's register casual and compact. Drop trivially inferable connective facts rather than enumerating every detail mechanically, but never drop a whole given detail.
   - Output only the request text.
 
-filter_prompt: |
-  You are given a user's image-generation request and a hidden detail about the image the user actually wants. Judge whether the hidden detail can be confidently inferred from the request alone.
-
-  Rules:
-  - "Inferable" means: an image model given only this request would very likely satisfy the hidden detail anyway - because the request implies it, common sense dictates it, or it is the overwhelming default for such a scene (e.g. "grass is green", "a wedding cake has tiers").
-  - Merely plausible is NOT inferable. If several alternatives are about equally likely (a cake stand could be white, silver, glass, or wood), the detail is not inferable.
-  - best_guess is the single most likely value/answer for the hidden detail given only the request.
-  - confidence is your probability (0 to 1) that an image generated from the request alone would satisfy the hidden detail.
-
 ##############################
 # Episode prompts
 ##############################

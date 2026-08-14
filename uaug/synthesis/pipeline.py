@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 from uaug.schema import DETAIL_CATEGORIES, Detail, TaskInstance
 from uaug.synthesis.report import write_html_report
-from uaug.utils.misc import leakage_overlap, read_jsonl, write_jsonl
+from uaug.utils.misc import read_jsonl, write_jsonl
 from uaug.utils.wrappers import LanguageModel
 
 
@@ -27,9 +27,6 @@ class SynthesisPipeline:
     categories: Optional[List[str]]
     budget: int
     min_details: int
-    max_redraws: int
-    filter_confidence_threshold: float
-    leakage_threshold: float
     report_examples: int
     split_fractions: Dict[str, float]
     random_seed: int
@@ -37,7 +34,6 @@ class SynthesisPipeline:
     resume_path: Optional[str]
     decomposer: LanguageModel
     eroder: LanguageModel
-    inferability_filter: LanguageModel
 
     def _load_sources(self) -> List[dict]:
         sources = read_jsonl(self.sources_path)
@@ -70,23 +66,12 @@ class SynthesisPipeline:
             details.append(Detail(id=i, text=item.text, category=item.category, importance=item.importance, check=item.check))
         return details
 
-    def _sample_mask(
-        self,
-        details: List[Detail],
-        rng: random.Random,
-        current: Optional[List[int]] = None,
-        excluded: Optional[set] = None,
-    ) -> List[int]:
-        """Importance-weighted sample of k details, preferring distinct categories.
-
-        With current/excluded set, keeps current mask entries and only draws
-        replacements, never picking excluded ids (details that failed a gate).
-        """
+    def _sample_mask(self, details: List[Detail], rng: random.Random) -> List[int]:
+        """Importance-weighted sample of k details, preferring distinct categories."""
         pool = details if self.categories is None else [d for d in details if d.category in self.categories]
-        mask: List[int] = list(current or [])
-        excluded = excluded or set()
-        used_categories = {d.category for d in pool if d.id in mask}
-        candidates = [d for d in pool if d.id not in mask and d.id not in excluded]
+        mask: List[int] = []
+        used_categories: set = set()
+        candidates = list(pool)
         while len(mask) < self.k and candidates:
             # Prefer categories not yet redacted so a mask spans distinct detail types
             fresh = [d for d in candidates if d.category not in used_categories]
@@ -109,54 +94,27 @@ class SynthesisPipeline:
 
         rng = random.Random(f"{self.random_seed}:{source_id}")
         mask = self._sample_mask(details, rng)
-        excluded: set = set()
-        for attempt in range(self.max_redraws):
-            if len(mask) < self.k:
-                return None, "not_enough_redactable"
-            mask_set = set(mask)
-            kept = [d for d in details if d.id not in mask_set]
-            redacted = [d for d in details if d.id in mask_set]
+        if len(mask) < self.k:
+            return None, "not_enough_redactable"
+        mask_set = set(mask)
+        kept = [d for d in details if d.id not in mask_set]
 
-            erode_output = self.eroder.get_response(details=[d.text for d in kept])
-            if erode_output is None or not erode_output.request.strip():
-                return None, "erode_failed"
-            eroded_prompt = erode_output.request.strip()
+        erode_output = self.eroder.get_response(details=[d.text for d in kept])
+        if erode_output is None or not erode_output.request.strip():
+            return None, "erode_failed"
 
-            # A redacted detail fails its gate when the eroder's prior re-inserted its
-            # *novel* words (leakage) or the LLM prior recovers it anyway (inferability).
-            # Failed details are replaced individually; the rest of the mask is kept.
-            kept_texts = [d.text for d in kept]
-            bad_ids: set = set()
-            for d in redacted:
-                if leakage_overlap(d.text, eroded_prompt, reference_texts=kept_texts) > self.leakage_threshold:
-                    logging.info("Leakage (attempt %d, source %s): %s", attempt + 1, source_id, d.text)
-                    bad_ids.add(d.id)
-                    continue
-                verdict = self.inferability_filter.get_response(request=eroded_prompt, hidden_detail=d.text)
-                if verdict is None:
-                    return None, "filter_failed"
-                if verdict.inferable and verdict.confidence > self.filter_confidence_threshold:
-                    logging.info("Inferable (attempt %d, source %s): %s", attempt + 1, source_id, d.text)
-                    bad_ids.add(d.id)
-
-            if bad_ids:
-                excluded |= bad_ids
-                mask = self._sample_mask(details, rng, current=[i for i in mask if i not in bad_ids], excluded=excluded)
-                continue
-
-            instance = TaskInstance(
-                instance_id=f"{source_id}.k{self.k}",
-                task="image",
-                source_id=source_id,
-                full_spec=source["full_spec"],
-                details=details,
-                redacted_ids=mask,
-                eroded_prompt=eroded_prompt,
-                budget=self.budget,
-                split=self._assign_split(source_id),
-            )
-            return instance, "ok"
-        return None, "redraws_exhausted"
+        instance = TaskInstance(
+            instance_id=f"{source_id}.k{self.k}",
+            task="image",
+            source_id=source_id,
+            full_spec=source["full_spec"],
+            details=details,
+            redacted_ids=mask,
+            eroded_prompt=erode_output.request.strip(),
+            budget=self.budget,
+            split=self._assign_split(source_id),
+        )
+        return instance, "ok"
 
     def run(self, results_dir: str, max_workers: int = 8):
         sources = self._load_sources()
