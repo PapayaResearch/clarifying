@@ -3,7 +3,7 @@
 # backend - needs a GPU box and pip install -e .[train_local].
 
 # Hydra target class
-_target_: uaug.models.ChatModel
+_target_: uaug.utils.models.ChatModel
 # Display name (used in result/log paths)
 name: llama-3.1-8b
 # Serving backend: tinker (managed sampling + LoRA RL) or local (HF transformers)

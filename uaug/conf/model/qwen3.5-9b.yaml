@@ -1,7 +1,7 @@
 # Qwen3.5-9B (Alibaba): current-generation small dense model on the Tinker roster.
 
 # Hydra target class
-_target_: uaug.models.ChatModel
+_target_: uaug.utils.models.ChatModel
 # Display name (used in result/log paths)
 name: qwen3.5-9b
 # Serving backend: tinker (managed sampling + LoRA RL) or local (HF transformers)

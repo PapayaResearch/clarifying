@@ -19,8 +19,6 @@ class ApiCall:
 
 @dataclass
 class Model:
-    # The model under test (uaug.models.ChatModel): the conversation side of
-    # every agent - ${model} instantiates to the object itself (see conf/model/)
     _target_: str
     name: str
     provider: str
@@ -97,9 +95,7 @@ class Prompt:
 
 @dataclass
 class Redaction:
-    # Number of details to redact per instance
     k: int
-    # Restrict redaction to these categories (null = all)
     categories: Optional[List[str]]
 
 

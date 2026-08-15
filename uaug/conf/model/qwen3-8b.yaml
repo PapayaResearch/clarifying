@@ -7,7 +7,7 @@
 # LanguageModel wrappers and as the sampling policy behind PolicyAgent.
 
 # Hydra target class
-_target_: uaug.models.ChatModel
+_target_: uaug.utils.models.ChatModel
 # Display name (used in result/log paths)
 name: qwen3-8b
 # Serving backend: tinker (managed sampling + LoRA RL) or local (HF transformers)
