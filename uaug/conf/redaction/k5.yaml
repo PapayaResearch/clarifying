@@ -1,4 +1,0 @@
-﻿# Number of details to redact per instance
-k: 5
-# Restrict redaction to these categories (null = sample across all categories)
-categories: null

@@ -6,15 +6,11 @@ sources_path: ${dataset.sources_path}
 # Number of sources to process (null = all)
 num_sources: 50
 # Number of details to redact per instance
-k: ${redaction.k}
+k: 3
 # Restrict redaction to these categories (null = all)
-categories: ${redaction.categories}
-# Question budget stamped on each instance
-budget: 5
+categories: null
 # Drop sources whose decomposition yields fewer details than this
 min_details: 8
-# Example instances embedded in the run's HTML report
-report_examples: 4
 # Split fractions by source (assigned by seeded hash of source_id)
 split_fractions:
   train: 0.6
@@ -30,7 +26,7 @@ resume_path: null
 # Decomposer: full description -> atomic details with category/importance/check
 decomposer:
   _target_: uaug.utils.wrappers.LanguageModel
-  system_prompt: ${prompt.decompose_prompt}
+  system_prompt: ${prompts.decompose_prompt}
   input_schema:
     _target_: uaug.synthesis.schemas.decompose_input_schema
   output_schema:
@@ -40,7 +36,7 @@ decomposer:
 # Eroder: kept details -> natural underspecified user request
 eroder:
   _target_: uaug.utils.wrappers.LanguageModel
-  system_prompt: ${prompt.erode_prompt}
+  system_prompt: ${prompts.erode_prompt}
   input_schema:
     _target_: uaug.synthesis.schemas.erode_input_schema
   output_schema:
