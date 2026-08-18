@@ -1,27 +1,12 @@
-# The model under test (default): holds the conversation for every agent -
-# prompted baselines, PolicyAgent, and the trainer all read from this group,
-# so agent-side results stay directly comparable across runs and checkpoints.
-# Environment roles (synthesis, user simulator, judge) stay on the llm group.
-#
-# ${model} instantiates to a ChatModel: usable directly as api_call in
-# LanguageModel wrappers and as the sampling policy behind PolicyAgent.
-
 # Hydra target class
 _target_: uaug.utils.models.ChatModel
 # Display name (used in result/log paths)
 name: qwen3-8b
-# Serving backend: tinker (managed sampling + LoRA RL) or local (HF transformers)
-provider: tinker
-# Model identifier (HF model id)
+# Model identifier (HF model id, sampled via Tinker)
 model_id: Qwen/Qwen3-8B
-# Fine-tuned checkpoint (Tinker sampler path or local dir; null = base weights)
+# Fine-tuned checkpoint (Tinker sampler path; null = base weights)
 checkpoint: null
-# tinker-cookbook chat renderer (null = Tinker's recommended one; the disable-
-# thinking variant keeps <think> blocks out of action text and token budgets)
-renderer_name: qwen3_disable_thinking
 # Max sampled tokens per agent call
-max_tokens: 512
-# Sampling temperature for agent calls (0 = greedy; training rollouts use the trainer's)
+max_tokens: 2048
+# Sampling temperature for agent calls (0 = greedy; training rollouts use training.temperature)
 temperature: 0.0
-# Disk cache for chat calls (invalid structured outputs are never cached)
-cache_dir: ${logging.cache_dir}

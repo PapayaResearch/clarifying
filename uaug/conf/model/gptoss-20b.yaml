@@ -1,0 +1,12 @@
+# Hydra target class
+_target_: uaug.utils.models.ChatModel
+# Display name (used in result/log paths)
+name: gptoss-20b
+# Model identifier (HF model id, sampled via Tinker)
+model_id: openai/gpt-oss-20b
+# Fine-tuned checkpoint (Tinker sampler path; null = base weights)
+checkpoint: null
+# Max sampled tokens per agent call
+max_tokens: 2048
+# Sampling temperature for agent calls (0 = greedy; training rollouts use training.temperature)
+temperature: 0.0
