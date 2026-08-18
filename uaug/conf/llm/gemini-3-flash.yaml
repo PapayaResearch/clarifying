@@ -6,7 +6,3 @@ model: gemini/gemini-3-flash-preview
 delay: 0
 # Extra litellm completion parameters
 params: {}
-# Disk cache for responses (null disables caching)
-cache_dir: ${logging.cache_dir}
-# Abort once total spend exceeds this (USD)
-max_usd: ${general.max_usd}
