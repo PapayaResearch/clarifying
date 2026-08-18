@@ -13,29 +13,29 @@ decompose_prompt: |
   Given a complete, detailed description of an image, decompose it into a list of atomic details.
 
   Rules:
-  - Each detail states exactly ONE checkable fact about the image (one entity, one attribute value, one relation, one style/count/layout fact). Split compound sentences into separate details.
-  - Each detail must be objectively verifiable from the description alone. Skip subjective filler ("inviting aesthetic", "sense of elegance") unless it names a concrete visual style.
-  - Each detail must be self-contained: name the entities it refers to explicitly (write "the cake stand is white", never "it is white").
-  - The category must be one of the allowed categories below. Prefer the most precise label that applies.
-  - importance is how much the image would change if this detail were different, from 0 (barely noticeable) to 1 (defining feature of the image). Central subjects and their defining attributes score high; incidental background facts score low.
-  - check is a self-contained yes/no question a judge can ask about ANY text describing this image to verify the detail is stated, e.g. "Does the text specify that the cake stand is white?". It must not depend on seeing other details.
-  - Cover the entire description: every concrete visual fact should appear in exactly one detail. Do not invent facts that are not stated.
+  - Each detail states exactly one checkable fact about the image. Split compound sentences.
+  - Each detail must be self-contained and objectively verifiable from the description alone.
+  - The category must be one of the allowed categories below. Prefer the most precise label.
+  - importance is how much the image would change if this detail were different, from 0 (barely noticeable) to 1 (defining feature).
+  - check is a self-contained yes/no question a judge can ask about any text describing this image.
+  - Every concrete visual fact appears in exactly one detail. Do not invent facts.
 
   Allowed categories:
   - entity: an object or subject is present in the scene.
   - attribute: a visual property (color, material, texture, size, shape, text content) of a named entity.
   - relation: a spatial or interactional relation between two named entities.
-  - style: a global rendering or photographic property (medium, lighting, palette, mood-as-style, camera angle).
+  - style: a global rendering or photographic property (medium, lighting, palette, camera angle).
   - count: an explicit quantity of some entity.
   - layout: global composition or positioning within the frame.
 
 erode_prompt: |
-  You are given a list of image details. Write the request that a user who wants this image would plausibly type into an image-generation tool.
+  You are given a list of image details.
+  Write the request that a user who wants this image would plausibly type into an image-generation tool.
 
   Rules:
-  - Include ONLY the facts in the given details. Do not add, embellish, or infer any other visual fact. Do not compensate for missing information: if the details say nothing about color, lighting, style, or background, your request says nothing about them either.
-  - Write it as a natural, flowing request of 1-3 sentences, the way a real user writes ("A white cake with berries on a cake stand, next to a vase"), not as a list or a caption.
-  - Keep the user's register casual and compact. Drop trivially inferable connective facts rather than enumerating every detail mechanically, but never drop a whole given detail.
+  - Include only the facts in the given details. Do not add, infer, or compensate for missing information.
+  - Write a natural, flowing request of 1-3 sentences, the way a real user writes, not a list or caption.
+  - Keep the register casual and compact. Drop trivially inferable connective facts, but never a whole detail.
   - Output only the request text.
 
 ##############################
@@ -43,46 +43,39 @@ erode_prompt: |
 ##############################
 
 user_prompt: |
-  You are role-playing a user who asked an assistant to generate an image. You know exactly what image you want: the complete ground-truth description is given as INTENT. The assistant may ask you clarification questions.
+  You are role-playing a user who asked an assistant to generate an image.
+  The complete ground-truth description of the image you want is given as INTENT.
+  The assistant may ask you clarification questions.
 
   Rules:
-  - Answer only what was asked, truthfully, based on the INTENT. Keep it to 1-2 short, casual sentences.
+  - Answer only what was asked, truthfully based on the INTENT, in 1-2 short casual sentences.
   - Never volunteer details that were not asked about.
-  - If the question asks about something the INTENT does not specify, say you have no preference.
-  - Never mention the INTENT, ground truth, specifications, or that you are role-playing. You are just a person who wants their image.
+  - If the INTENT does not specify the answer, say you have no preference.
+  - Never mention the INTENT or that you are role-playing.
 
 ##############################
 # Agent prompts
 ##############################
 
 ask_prompt: |
-  You are an assistant preparing to generate an image for a user. The user's request may be missing details that matter to them.
-
-  Ask exactly ONE concise, easy-to-answer clarification question:
-  - Reason about which aspects of the intended image are both unspecified and important: main subjects and their defining attributes, spatial arrangement, style/camera, counts.
-  - Never ask about anything already stated in the request, already answered in the conversation, or obvious from common sense.
-  - Target the most important unresolved aspect first.
-
-  Reply with the question only - no preamble, no commentary.
+  You are an assistant preparing to generate an image for a user.
+  The user's request may be missing details that matter to them.
+  Ask one short clarifying question about whatever would matter most to the user and is still unclear.
+  Don't ask about anything they already told you or anything obvious.
+  Reply with the question only.
 
 final_prompt: |
   Write the complete, detailed description of the image implied by the user's request and the conversation.
-
-  Rules:
-  - Include EVERY detail the user stated in the request or answers - none may be dropped or altered.
-  - Where something visually important is unspecified, fill in the single most likely choice so the description is complete and concrete (a real image has a definite answer for everything).
-  - Write flowing descriptive prose, 100-180 words, in the style of a dense image caption. No meta-commentary, no lists.
-
+  Include every detail the user stated, none may be dropped or altered.
+  Where something visually important was never specified, fill in the most likely choice so the description is complete and concrete.
+  Write flowing prose, 100-180 words, like a dense image caption.
   Reply with the description only.
 
 decide_prompt: |
-  You are an assistant preparing to generate an image for a user. The user's request may be missing details that matter to them. You may ask clarification questions before committing to the image, but questions cost the user time - ask only when the expected value is high.
-
-  Decide whether to ask ONE more clarification question:
-  - Consider which aspects of the intended image are still both unspecified and important: main subjects and their defining attributes, spatial arrangement, style/camera, counts.
-  - Ignore anything already stated in the request, already answered in the conversation, or obvious from common sense.
-  - If something important is still missing, answer yes. If the remaining uncertainty is low, answer no.
-
+  You are an assistant preparing to generate an image for a user.
+  The user's request may be missing details that matter to them.
+  Questions cost the user time, so only ask when it is really worth it.
+  Decide whether to ask one more clarifying question: if something important is still unclear, answer yes; if you already know enough to make the image, answer no.
   Reply with exactly one word: yes or no.
 
 ##############################
@@ -93,6 +86,6 @@ judge_prompt: |
   You verify whether a piece of text satisfies a specific yes/no check about an image description.
 
   Rules:
-  - Answer true only if the text explicitly states the fact or clearly entails it. Paraphrases and synonyms count.
-  - If the text is silent about the fact, contradicts it, or is only vaguely compatible with it, answer false.
-  - Judge only against the given text. Do not use outside knowledge about what is likely.
+  - Answer true only if the text explicitly states the fact or clearly entails it, paraphrases and synonyms count.
+  - If the text is silent, contradicts it, or is only vaguely compatible, answer false.
+  - Judge only against the given text, do not use outside knowledge about what is likely.
