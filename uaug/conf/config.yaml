@@ -4,25 +4,18 @@
 
 defaults:
   - _self_
+  - prompts: default
   - synthesis: default
-  - episodes: default
   - training: default
-  # Orchestration LLM: environment roles only (synthesis, user simulator, judge)
+  - evaluation: default
+  # Orchestration LLM (used in synthesis, user simulator, judge)
   - llm: gemini-3-flash
-  # Model under test: holds the conversation for every agent (baselines, policy, trainer)
+  # Model under test (holds the conversation for every agent)
   - model: qwen3-8b
-  # Dataset used (e.g. docci, designbench, etc.)
+  # Dataset used (e.g., docci)
   - dataset: docci
-  # Prompt set (all pipeline prompts live in one file)
-  - prompt: default
-  # Redaction scheme (e.g. k1, k3, k5)
-  - redaction: k3
-  # Agent policy for episodes (e.g. zeroq, prompted, upfront)
-  - agent: prompted
-  # User simulator behavior
-  - user: concise
-  # Rubric judge
-  - judge: default
+  # Evaluation agent (e.g., zeroq, asker_fixed, asker_dynamic)
+  - agent: asker_fixed
 
 ##############################
 # General Settings
@@ -33,8 +26,6 @@ general:
   max_workers: 8
   # Random seed for reproducibility
   random_seed: 42
-  # Abort any run whose accumulated API spend exceeds this (USD; null = unlimited)
-  max_usd: 30.0
 
 ##############################
 # Logging Settings
@@ -43,9 +34,55 @@ general:
 logging:
   # Base directory for writing log files
   log_dir: ${hydra:runtime.cwd}/logs
-  # Base directory for writing run results (JSONLs, configs, reports)
+  # Base directory for writing run results
   results_dir: ${hydra:runtime.cwd}/results
-  # Disk cache for LLM calls (keyed by model+messages+params hash)
-  cache_dir: ${hydra:runtime.cwd}/cache
   # Also log to console
   console: false
+
+##############################
+# User Simulator
+##############################
+
+user:
+  # Hydra target class
+  _target_: uaug.evaluation.user.UserSimulator
+  # The answering model
+  model:
+    _target_: uaug.utils.wrappers.LanguageModel
+    system_prompt: ${prompts.user_prompt}
+    input_schema:
+      _target_: uaug.evaluation.user.user_answer_input_schema
+      intent_description: |
+        The complete ground-truth description of the image the user wants.
+      conversation_description: |
+        The conversation so far, with the user's original request and any question-answer turns.
+      question_description: |
+        The assistant's clarification question to answer.
+    output_schema:
+      _target_: uaug.evaluation.user.user_answer_output_schema
+      answer_description: |
+        The user's answer to the question.
+    api_call: ${llm}
+
+##############################
+# Rubric Judge
+##############################
+
+judge:
+  # Hydra target class
+  _target_: uaug.utils.judge.RubricJudge
+  # The rubric checker: one yes/no verdict per (check, text) pair
+  checker:
+    _target_: uaug.utils.wrappers.LanguageModel
+    system_prompt: ${prompts.judge_prompt}
+    input_schema:
+      _target_: uaug.utils.judge.check_input_schema
+      check_description: |
+        The yes/no question about the text to verify.
+      text_description: |
+        The only text to judge the check against.
+    output_schema:
+      _target_: uaug.utils.judge.check_output_schema
+      satisfied_description: |
+        Whether the text states or clearly entails the fact.
+    api_call: ${llm}

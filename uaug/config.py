@@ -13,21 +13,16 @@ class ApiCall:
     model: str
     delay: float
     params: dict
-    cache_dir: Optional[str] = None
-    max_usd: Optional[float] = None
 
 
 @dataclass
 class Model:
     _target_: str
     name: str
-    provider: str
     model_id: str
     checkpoint: Optional[str]
-    renderer_name: Optional[str]
     max_tokens: int
     temperature: float
-    cache_dir: Optional[str] = None
 
 
 @dataclass
@@ -50,14 +45,12 @@ class LanguageModel:
 class General:
     max_workers: int
     random_seed: int
-    max_usd: Optional[float]
 
 
 @dataclass
 class Logging:
     log_dir: str
     results_dir: str
-    cache_dir: str
     console: bool
 
 
@@ -78,25 +71,43 @@ class Dataset:
 
 
 @dataclass
-class Prompt:
+class Prompts:
     decompose_prompt: str
     erode_prompt: str
     user_prompt: str
-    asker_prompt: str
-    compose_prompt: str
+    ask_prompt: str
+    final_prompt: str
+    decide_prompt: str
     judge_prompt: str
-    policy_prompt: str
 
 
 ##############################
-# Redaction Settings
+# Agent, User & Judge Settings
 ##############################
 
 
 @dataclass
-class Redaction:
-    k: int
-    categories: Optional[List[str]]
+class Agent:
+    _target_: str
+    name: str
+    mode: str
+    max_questions: int
+    model: Model
+    ask_prompt: str
+    final_prompt: str
+    decide_prompt: str
+
+
+@dataclass
+class User:
+    _target_: str
+    model: LanguageModel
+
+
+@dataclass
+class Judge:
+    _target_: str
+    checker: LanguageModel
 
 
 ##############################
@@ -111,9 +122,8 @@ class Synthesis:
     num_sources: Optional[int]
     k: int
     categories: Optional[List[str]]
-    budget: int
+    importance_weighting: str
     min_details: int
-    report_examples: int
     split_fractions: Dict[str, float]
     random_seed: int
     resume: bool
@@ -123,25 +133,18 @@ class Synthesis:
 
 
 ##############################
-# Episode Settings
+# Training Settings
 ##############################
 
 
 @dataclass
-class Episodes:
+class Trainer:
     _target_: str
-    instances_dir: Optional[str]
-    split: str
-    seeds: List[int]
-    budget_override: Optional[int]
-    agent: Any
-    user: Any
-    judge: Any
-
-
-##############################
-# Training Settings
-##############################
+    base_model: str
+    lora_rank: int
+    learning_rate: float
+    max_tokens: int
+    temperature: float
 
 
 @dataclass
@@ -149,18 +152,38 @@ class Training:
     _target_: str
     instances_dir: Optional[str]
     split: str
-    budget_override: Optional[int]
+    mode: str
+    max_questions: int
     n_iterations: int
     instances_per_iteration: int
     group_size: int
     save_every: int
     normalize_advantages: bool
-    policy_prompt: str
+    ask_prompt: str
+    final_prompt: str
+    decide_prompt: str
     random_seed: int
-    reward: Any
-    trainer: Any
-    user: Any
-    judge: Any
+    reward: Any  # shape depends on the conf/training/reward/* group choice
+    trainer: Trainer
+    user: User
+    judge: Judge
+
+
+##############################
+# Evaluation Settings
+##############################
+
+
+@dataclass
+class Evaluation:
+    _target_: str
+    instances_dir: Optional[str]
+    split: str
+    seeds: List[int]
+    checkpoint: Optional[str]
+    agent: Agent
+    user: User
+    judge: Judge
 
 
 ##############################
@@ -173,13 +196,12 @@ class Config:
     llm: ApiCall
     model: Model
     dataset: Dataset
-    prompt: Prompt
-    redaction: Redaction
+    prompts: Prompts
     synthesis: Synthesis
-    episodes: Episodes
     training: Training
-    agent: Any
-    user: Any
-    judge: Any
+    evaluation: Evaluation
+    agent: Agent
+    user: User
+    judge: Judge
     general: General
     logging: Logging
