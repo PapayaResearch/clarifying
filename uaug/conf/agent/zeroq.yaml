@@ -1,15 +1,14 @@
 # Hydra target class
-_target_: uaug.episodes.agents.ZeroQAgent
-
-# Agent name used in result files
+_target_: uaug.evaluation.agents.Asker
+# Agent name recorded in results
 name: zeroq
-
-# Final-description composer (fills unspecified aspects from the prior - by design)
-composer:
-  _target_: uaug.utils.wrappers.LanguageModel
-  system_prompt: ${prompt.compose_prompt}
-  input_schema:
-    _target_: uaug.episodes.schemas.compose_input_schema
-  output_schema:
-    _target_: uaug.episodes.schemas.compose_output_schema
-  api_call: ${model}
+# No questions: straight to the final description
+mode: fixed
+# Maximum number of questions the agent can ask
+max_questions: 0
+# The conversation model
+model: ${model}
+# Prompts shared by every agent
+ask_prompt: ${prompts.ask_prompt}
+final_prompt: ${prompts.final_prompt}
+decide_prompt: ${prompts.decide_prompt}

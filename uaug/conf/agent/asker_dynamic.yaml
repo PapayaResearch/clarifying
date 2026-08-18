@@ -1,0 +1,14 @@
+# Hydra target class
+_target_: uaug.evaluation.agents.Asker
+# Agent name recorded in results
+name: asker_dynamic
+# Dynamic mode: before each question the model decides whether to ask one more
+mode: dynamic
+# Maximum number of questions the agent can ask
+max_questions: 10
+# The conversation model
+model: ${model}
+# Prompts shared by every agent
+ask_prompt: ${prompts.ask_prompt}
+final_prompt: ${prompts.final_prompt}
+decide_prompt: ${prompts.decide_prompt}

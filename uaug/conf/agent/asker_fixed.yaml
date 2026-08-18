@@ -1,0 +1,14 @@
+# Hydra target class
+_target_: uaug.evaluation.agents.Asker
+# Agent name recorded in results
+name: asker_fixed
+# Fixed mode: the model asks exactly max_questions questions
+mode: fixed
+# Maximum number of questions the agent can ask
+max_questions: 3
+# The conversation model
+model: ${model}
+# Prompts shared by every agent
+ask_prompt: ${prompts.ask_prompt}
+final_prompt: ${prompts.final_prompt}
+decide_prompt: ${prompts.decide_prompt}
