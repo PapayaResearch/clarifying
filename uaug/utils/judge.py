@@ -4,7 +4,7 @@ from typing import Type
 
 from pydantic import Field
 
-from uaug.schema import Episode, JudgeResult, TaskInstance
+from uaug.utils.schema import Episode, JudgeResult, TaskInstance
 from uaug.utils.wrappers import IOSchema, LanguageModel
 
 
