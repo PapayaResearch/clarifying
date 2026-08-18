@@ -4,7 +4,6 @@
 
 defaults:
   - _self_
-  - prompts: default
   - synthesis: default
   - training: default
   - evaluation: default
@@ -14,6 +13,8 @@ defaults:
   - model: qwen3-8b
   # Dataset used (e.g., docci)
   - dataset: docci
+  # Task to test (e.g., image-gen)
+  - task: image-gen
   # Evaluation agent (e.g., zeroq, asker_fixed, asker_dynamic)
   - agent: asker_fixed
 
@@ -49,11 +50,11 @@ user:
   # The answering model
   model:
     _target_: uaug.utils.wrappers.LanguageModel
-    system_prompt: ${prompts.user_prompt}
+    system_prompt: ${task.user_prompt}
     input_schema:
       _target_: uaug.evaluation.user.user_answer_input_schema
       intent_description: |
-        The complete ground-truth description of the image the user wants.
+        The complete ground-truth specification of what the user wants.
       conversation_description: |
         The conversation so far, with the user's original request and any question-answer turns.
       question_description: |
@@ -74,7 +75,7 @@ judge:
   # The rubric checker: one yes/no verdict per (check, text) pair
   checker:
     _target_: uaug.utils.wrappers.LanguageModel
-    system_prompt: ${prompts.judge_prompt}
+    system_prompt: ${task.judge_prompt}
     input_schema:
       _target_: uaug.utils.judge.check_input_schema
       check_description: |

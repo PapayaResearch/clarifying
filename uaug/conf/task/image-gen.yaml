@@ -1,4 +1,11 @@
 ##############################
+# Task definition
+##############################
+
+name: image-gen
+categories: [entity, attribute, relation, style, count, layout]
+
+##############################
 # Synthesis prompts
 ##############################
 

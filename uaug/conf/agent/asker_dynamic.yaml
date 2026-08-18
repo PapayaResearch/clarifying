@@ -9,6 +9,6 @@ max_questions: 10
 # The conversation model
 model: ${model}
 # Prompts shared by every agent
-ask_prompt: ${prompts.ask_prompt}
-final_prompt: ${prompts.final_prompt}
-decide_prompt: ${prompts.decide_prompt}
+ask_prompt: ${task.ask_prompt}
+final_prompt: ${task.final_prompt}
+decide_prompt: ${task.decide_prompt}

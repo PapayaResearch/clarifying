@@ -2,13 +2,13 @@
 _target_: uaug.evaluation.agents.Asker
 # Agent name recorded in results
 name: zeroq
-# No questions: straight to the final description
+# No questions: straight to the final output
 mode: fixed
 # Maximum number of questions the agent can ask
 max_questions: 0
 # The conversation model
 model: ${model}
 # Prompts shared by every agent
-ask_prompt: ${prompts.ask_prompt}
-final_prompt: ${prompts.final_prompt}
-decide_prompt: ${prompts.decide_prompt}
+ask_prompt: ${task.ask_prompt}
+final_prompt: ${task.final_prompt}
+decide_prompt: ${task.decide_prompt}

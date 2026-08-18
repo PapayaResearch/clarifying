@@ -66,12 +66,14 @@ class Dataset:
 
 
 ##############################
-# Prompt Settings
+# Task Settings
 ##############################
 
 
 @dataclass
-class Prompts:
+class Task:
+    name: str
+    categories: List[str]
     decompose_prompt: str
     erode_prompt: str
     user_prompt: str
@@ -120,8 +122,9 @@ class Synthesis:
     _target_: str
     sources_path: str
     num_sources: Optional[int]
+    task: str
+    detail_categories: List[str]
     k: int
-    categories: Optional[List[str]]
     importance_weighting: str
     min_details: int
     split_fractions: Dict[str, float]
@@ -196,7 +199,7 @@ class Config:
     llm: ApiCall
     model: Model
     dataset: Dataset
-    prompts: Prompts
+    task: Task
     synthesis: Synthesis
     training: Training
     evaluation: Evaluation

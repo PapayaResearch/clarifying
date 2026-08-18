@@ -1,9 +1,6 @@
 import dataclasses
 from typing import Any, Dict, List
 
-# Detail categories (extended from the Proactive T2I Agents belief-graph vocabulary)
-DETAIL_CATEGORIES = ["entity", "attribute", "relation", "style", "count", "layout"]
-
 
 @dataclasses.dataclass
 class Detail:
