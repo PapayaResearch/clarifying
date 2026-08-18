@@ -4,8 +4,8 @@ _target_: uaug.evaluation.agents.Asker
 name: asker_dynamic
 # Dynamic mode: before each question the model decides whether to ask one more
 mode: dynamic
-# Maximum number of questions the agent can ask
-max_questions: 10
+# Maximum number of questions the agent can ask (default: 2k)
+max_questions: ${mul:${general.k},2}
 # The conversation model
 model: ${model}
 # Prompts shared by every agent

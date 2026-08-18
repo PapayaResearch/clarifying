@@ -26,15 +26,17 @@ def main(cfg: Config):
 
     # Set up logging
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    model_name = cfg.llm.model.replace("/", "_")
-    log_dir = os.path.join(cfg.logging.log_dir, cfg.dataset.name, "synthesis", model_name)
+    log_dir = os.path.join(cfg.logging.log_dir, "synthesis")
     log_file = os.path.join(log_dir, current_date + ".log")
     if cfg.synthesis.resume:
         if cfg.synthesis.resume_path is None:
             raise ValueError("cfg.synthesis.resume_path must be set when cfg.synthesis.resume=True")
         results_dir = cfg.synthesis.resume_path
     else:
-        results_dir = os.path.join(cfg.logging.results_dir, cfg.dataset.name, "synthesis", model_name, current_date)
+        llm_name = cfg.llm.model.split("/")[-1]
+        results_dir = os.path.join(
+            cfg.logging.results_dir, "synthesis", cfg.task.name, cfg.dataset.name, llm_name, f"k_{cfg.synthesis.k}", current_date
+        )
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(results_dir, exist_ok=True)
 

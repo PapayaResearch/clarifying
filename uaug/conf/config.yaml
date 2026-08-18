@@ -23,6 +23,8 @@ defaults:
 ##############################
 
 general:
+  # Details redacted per instance
+  k: 3
   # Maximum number of parallel workers
   max_workers: 8
   # Random seed for reproducibility

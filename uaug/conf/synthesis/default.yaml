@@ -4,14 +4,14 @@ _target_: uaug.synthesis.pipeline.SynthesisPipeline
 # Normalized sources file ({source_id, full_spec} per line)
 sources_path: ${dataset.sources_path}
 # Number of sources to process (null = all)
-num_sources: 50
+num_sources: null
+# Task name recorded in instances
+task: ${task.name}
 # Number of details to redact per instance
-k: 3
-# Restrict redaction to these categories (null = all)
-categories: null
-# Drop sources whose decomposition yields fewer details than this
-min_details: 8
-# Split fractions by source (assigned by seeded hash of source_id)
+k: ${general.k}
+# Drop sources whose decomposition yields fewer details than this (default: k+5)
+min_details: ${add:${general.k},5}
+# Split fractions by source
 split_fractions:
   train: 0.6
   val: 0.2
@@ -23,22 +23,39 @@ resume: false
 # Existing results directory to resume from when resume=true
 resume_path: null
 
-# Decomposer: full description -> atomic details with category/importance/check
+# Decomposer: full specification -> atomic details with category/importance/check
 decomposer:
   _target_: uaug.utils.wrappers.LanguageModel
-  system_prompt: ${prompts.decompose_prompt}
+  system_prompt: ${task.decompose_prompt}
   input_schema:
     _target_: uaug.synthesis.schemas.decompose_input_schema
+    text_description: |
+      The complete, fully-specified text to decompose.
   output_schema:
     _target_: uaug.synthesis.schemas.decompose_output_schema
+    categories: ${task.categories}
+    details_description: |
+      Every concrete fact in the text, one atomic detail each.
+    text_description: |
+      The detail as one self-contained factual sentence naming its entities explicitly.
+    category_description: |
+      The detail's category, one of the allowed categories in the instructions.
+    importance_description: |
+      How much the intended output would change if this detail were different, 0 to 1.
+    check_description: |
+      Self-contained yes/no question verifying that a text states this detail.
   api_call: ${llm}
 
 # Eroder: kept details -> natural underspecified user request
 eroder:
   _target_: uaug.utils.wrappers.LanguageModel
-  system_prompt: ${prompts.erode_prompt}
+  system_prompt: ${task.erode_prompt}
   input_schema:
     _target_: uaug.synthesis.schemas.erode_input_schema
+    details_description: |
+      The details the user's request should contain.
   output_schema:
     _target_: uaug.synthesis.schemas.erode_output_schema
+    request_description: |
+      Natural 1-3 sentence user request containing only the given details.
   api_call: ${llm}

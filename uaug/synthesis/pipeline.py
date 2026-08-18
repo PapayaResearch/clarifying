@@ -11,23 +11,20 @@ from typing import Dict, List, Optional
 
 from tqdm import tqdm
 
-from uaug.schema import DETAIL_CATEGORIES, Detail, TaskInstance
-from uaug.report.synthesis import write_synthesis_report
+from uaug.utils.schema import Detail, TaskInstance
 from uaug.utils.misc import read_jsonl, write_jsonl
 from uaug.utils.wrappers import LanguageModel
 
 
 @dataclasses.dataclass
 class SynthesisPipeline:
-    """Pipeline turning fully-specified descriptions into redacted task instances."""
+    """Pipeline turning fully-specified sources into redacted task instances."""
 
     sources_path: str
     num_sources: Optional[int]
+    task: str
     k: int
-    categories: Optional[List[str]]
-    budget: int
     min_details: int
-    report_examples: int
     split_fractions: Dict[str, float]
     random_seed: int
     resume: bool
@@ -45,7 +42,8 @@ class SynthesisPipeline:
         return sources
 
     def _assign_split(self, source_id: str) -> str:
-        """Deterministic split assignment by hash of source_id (stable across runs and num_sources)."""
+        """Split by seeded hash of source_id: a source keeps its split across runs,
+        so train sources at one k never reappear in val/test at another."""
         bucket = int(hashlib.sha256(f"{self.random_seed}:{source_id}".encode()).hexdigest(), 16) % 10_000 / 10_000
         cumulative = 0.0
         for split, fraction in self.split_fractions.items():
@@ -55,27 +53,23 @@ class SynthesisPipeline:
         return list(self.split_fractions)[-1]
 
     def _decompose(self, source: dict) -> Optional[List[Detail]]:
-        output = self.decomposer.get_response(description=source["full_spec"])
+        output = self.decomposer.get_response(text=source["full_spec"])
         if output is None:
             return None
-        details = []
-        for i, item in enumerate(output.details):
-            if item.category not in DETAIL_CATEGORIES:
-                logging.warning("Dropping detail with invalid category %r (source %s)", item.category, source["source_id"])
-                continue
-            details.append(Detail(id=i, text=item.text, category=item.category, importance=item.importance, check=item.check))
-        return details
+        return [
+            Detail(id=i, text=item.text, category=item.category, importance=item.importance, check=item.check)
+            for i, item in enumerate(output.details)
+        ]
 
     def _sample_mask(self, details: List[Detail], rng: random.Random) -> List[int]:
         """Importance-weighted sample of k details, preferring distinct categories."""
-        pool = details if self.categories is None else [d for d in details if d.category in self.categories]
         mask: List[int] = []
         used_categories: set = set()
-        candidates = list(pool)
+        candidates = list(details)
         while len(mask) < self.k and candidates:
             # Prefer categories not yet redacted so a mask spans distinct detail types
             fresh = [d for d in candidates if d.category not in used_categories]
-            choices = fresh or candidates
+            choices = fresh if len(fresh) > 0 else candidates
             weights = [max(d.importance, 0.05) for d in choices]
             picked = rng.choices(choices, weights=weights, k=1)[0]
             mask.append(picked.id)
@@ -89,7 +83,7 @@ class SynthesisPipeline:
         details = self._decompose(source)
         if details is None:
             return None, "decompose_failed"
-        if len(details) < max(self.min_details, self.k + 2):
+        if len(details) < self.min_details:
             return None, "too_few_details"
 
         rng = random.Random(f"{self.random_seed}:{source_id}")
@@ -105,13 +99,12 @@ class SynthesisPipeline:
 
         instance = TaskInstance(
             instance_id=f"{source_id}.k{self.k}",
-            task="image",
+            task=self.task,
             source_id=source_id,
             full_spec=source["full_spec"],
             details=details,
             redacted_ids=mask,
             eroded_prompt=erode_output.request.strip(),
-            budget=self.budget,
             split=self._assign_split(source_id),
         )
         return instance, "ok"
@@ -150,7 +143,7 @@ class SynthesisPipeline:
         # Write per-split instance files + a synthesis report
         for split in self.split_fractions:
             split_instances = [inst for inst in instances if inst.split == split]
-            write_jsonl(os.path.join(results_dir, f"instances.{split}.jsonl"), [inst.to_dict() for inst in split_instances])
+            write_jsonl(os.path.join(results_dir, f"instances.{split}.jsonl"), split_instances)
             logging.info("Wrote %d %s instances", len(split_instances), split)
 
         category_counts = Counter(d.category for inst in instances for d in inst.redacted)
@@ -164,6 +157,3 @@ class SynthesisPipeline:
         with open(os.path.join(results_dir, "synthesis_report.json"), "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)
         logging.info("Synthesis report: %s", json.dumps(report))
-
-        write_synthesis_report(os.path.join(results_dir, "report.html"), instances, report, n_examples=self.report_examples)
-        logging.info("HTML report: %s", os.path.join(results_dir, "report.html"))

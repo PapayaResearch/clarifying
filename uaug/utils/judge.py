@@ -34,7 +34,9 @@ class RubricJudge:
         response = self.checker.get_response(check=check, text=text)
         return bool(response.satisfied) if response is not None else False
 
-    def judge(self, instance: TaskInstance, episode: Episode) -> JudgeResult:
+    def judge(self, instance: TaskInstance, episode: Episode, importance_weighting: str) -> JudgeResult:
+        if importance_weighting not in ("llm", "equal"):
+            raise ValueError(f"Unknown importance weighting: {importance_weighting!r} (expected 'llm' or 'equal')")
         answers = "\n".join(t.text for t in episode.turns if t.role == "user_answer")
 
         per_detail = {}
@@ -44,7 +46,7 @@ class RubricJudge:
             delivered = self._satisfied(detail.check, episode.final_output)
             per_detail[detail.id] = {"elicited": elicited, "delivered": delivered}
 
-        weights = {d.id: max(d.importance, 0.05) for d in instance.redacted}
+        weights = {d.id: max(d.importance, 0.05) if importance_weighting == "llm" else 1.0 for d in instance.redacted}
         total = sum(weights.values())
         u_rec = sum(w * per_detail[i]["delivered"] for i, w in weights.items()) / total
         eps_c = sum(w * (not per_detail[i]["elicited"]) for i, w in weights.items()) / total

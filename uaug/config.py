@@ -43,6 +43,7 @@ class LanguageModel:
 
 @dataclass
 class General:
+    k: int
     max_workers: int
     random_seed: int
 
@@ -123,9 +124,7 @@ class Synthesis:
     sources_path: str
     num_sources: Optional[int]
     task: str
-    detail_categories: List[str]
     k: int
-    importance_weighting: str
     min_details: int
     split_fractions: Dict[str, float]
     random_seed: int
@@ -157,6 +156,7 @@ class Training:
     split: str
     mode: str
     max_questions: int
+    importance_weighting: str
     n_iterations: int
     instances_per_iteration: int
     group_size: int
@@ -184,6 +184,7 @@ class Evaluation:
     split: str
     seeds: List[int]
     checkpoint: Optional[str]
+    importance_weighting: str
     agent: Agent
     user: User
     judge: Judge

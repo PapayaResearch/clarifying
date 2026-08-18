@@ -4,8 +4,8 @@ _target_: uaug.evaluation.agents.Asker
 name: asker_fixed
 # Fixed mode: the model asks exactly max_questions questions
 mode: fixed
-# Maximum number of questions the agent can ask
-max_questions: 3
+# Maximum number of questions the agent can ask (default: k)
+max_questions: ${general.k}
 # The conversation model
 model: ${model}
 # Prompts shared by every agent
