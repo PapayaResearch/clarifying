@@ -51,7 +51,6 @@ class Episode:
     turns: List[Turn]
     final_output: str
     n_questions: int
-    seed: int
 
 
 @dataclasses.dataclass
@@ -73,7 +72,6 @@ class JudgeResult:
     """Per-detail verdicts for an episode, split into elicited (in transcript) and delivered (in final output)."""
     instance_id: str
     agent_name: str
-    seed: int
     per_detail: Dict[int, Dict[str, bool]]
     u_rec: float
     eps_c_hat: float
@@ -84,7 +82,6 @@ class JudgeResult:
 class Trajectory:
     """One judged rollout with everything the training update consumes."""
     instance_id: str
-    seed: int
     episode: Episode
     judgment: JudgeResult
     agent_turns: List[AgentTurn]

@@ -1,0 +1,17 @@
+# Hydra target class
+_target_: uaug.evaluation.pipeline.EvaluationPipeline
+
+# Synthesis results directory holding instances.<split>.jsonl
+instances_dir: ???
+# Judge weighting over redacted details: "llm" or "equal"
+importance_weighting: llm
+
+# Which split to run on ("val" or "test")
+split: val
+
+# Agent
+agent: ${agent}
+# User simulator
+user: ${user}
+# Rubric judge
+judge: ${judge}

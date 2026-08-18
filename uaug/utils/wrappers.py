@@ -42,8 +42,8 @@ class ChatModel:
                 )
             return _MODELS[key]
 
-    def complete(self, messages: List[Dict[str, str]], seed: int = 0) -> Completion:
-        return self.model.complete(messages, seed)
+    def complete(self, messages: List[Dict[str, str]]) -> Completion:
+        return self.model.complete(messages)
 
 
 class IOSchema(BaseModel):

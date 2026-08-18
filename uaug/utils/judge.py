@@ -55,7 +55,6 @@ class RubricJudge:
         return JudgeResult(
             instance_id=episode.instance_id,
             agent_name=episode.agent_name,
-            seed=episode.seed,
             per_detail=per_detail,
             u_rec=u_rec,
             eps_c_hat=eps_c,

@@ -152,7 +152,7 @@ class Trainer:
 @dataclass
 class Training:
     _target_: str
-    instances_dir: Optional[str]
+    instances_dir: str
     split: str
     mode: str
     max_questions: int
@@ -180,10 +180,8 @@ class Training:
 @dataclass
 class Evaluation:
     _target_: str
-    instances_dir: Optional[str]
+    instances_dir: str
     split: str
-    seeds: List[int]
-    checkpoint: Optional[str]
     importance_weighting: str
     agent: Agent
     user: User
