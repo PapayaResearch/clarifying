@@ -1,12 +1,49 @@
 import json
 import logging
-from typing import List, Type
+import threading
+import dataclasses
+from typing import Dict, List, Optional, Type
 
 import litellm
 from pydantic import BaseModel
 
+from uaug.utils.schema import Completion
+from uaug.training.tinker import TinkerModel, load_model
+
 # Suppress litellm info messages
 litellm.suppress_debug_info = True
+
+# Served models are memoized so ChatModels with the same config share one sampling client
+_MODELS = {}
+_LOCK = threading.Lock()
+
+
+@dataclasses.dataclass
+class ChatModel:
+    """The model under test, sampled via Tinker. Holds the conversation for every agent."""
+
+    name: str
+    model_id: str
+    checkpoint: Optional[str]
+    max_tokens: int
+    temperature: float
+
+    @property
+    def model(self) -> TinkerModel:
+        """The served Tinker model (built lazily, shared across instances)."""
+        key = (self.model_id, self.checkpoint, self.max_tokens, self.temperature)
+        with _LOCK:
+            if key not in _MODELS:
+                _MODELS[key] = load_model(
+                    checkpoint=self.checkpoint,
+                    base_model=self.model_id,
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature,
+                )
+            return _MODELS[key]
+
+    def complete(self, messages: List[Dict[str, str]], seed: int = 0) -> Completion:
+        return self.model.complete(messages, seed)
 
 
 class IOSchema(BaseModel):

@@ -1,8 +1,7 @@
 import dataclasses
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-# Detail categories follow the Proactive T2I Agents belief-graph vocabulary
-# (entities/attributes/relations) extended with global scene properties.
+# Detail categories (extended from the Proactive T2I Agents belief-graph vocabulary)
 DETAIL_CATEGORIES = ["entity", "attribute", "relation", "style", "count", "layout"]
 
 
@@ -14,10 +13,6 @@ class Detail:
     category: str
     importance: float
     check: str
-
-    @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Detail":
-        return cls(**d)
 
 
 @dataclasses.dataclass
@@ -37,18 +32,10 @@ class TaskInstance:
         redacted_set = set(self.redacted_ids)
         return [d for d in self.details if d.id in redacted_set]
 
-    @property
-    def kept(self) -> List[Detail]:
-        redacted_set = set(self.redacted_ids)
-        return [d for d in self.details if d.id not in redacted_set]
-
-    def to_dict(self) -> Dict[str, Any]:
-        return dataclasses.asdict(self)
-
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "TaskInstance":
         d = dict(d)
-        d["details"] = [Detail.from_dict(x) for x in d["details"]]
+        d["details"] = [Detail(**x) for x in d["details"]]
         return cls(**d)
 
 
@@ -69,14 +56,19 @@ class Episode:
     n_questions: int
     seed: int
 
-    def to_dict(self) -> Dict[str, Any]:
-        return dataclasses.asdict(self)
 
-    @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Episode":
-        d = dict(d)
-        d["turns"] = [Turn(**x) for x in d["turns"]]
-        return cls(**d)
+@dataclasses.dataclass
+class Completion:
+    """One sampled model output plus backend-opaque training data (token ids, logprobs)."""
+    text: str
+    meta: Any = None
+
+
+@dataclasses.dataclass
+class AgentTurn:
+    """One model call during a rollout: the exact prompt messages and the sampled completion."""
+    messages: List[Dict[str, str]]
+    completion: Completion
 
 
 @dataclasses.dataclass
@@ -90,11 +82,14 @@ class JudgeResult:
     eps_c_hat: float
     eps_e_hat: float
 
-    def to_dict(self) -> Dict[str, Any]:
-        return dataclasses.asdict(self)
 
-    @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "JudgeResult":
-        d = dict(d)
-        d["per_detail"] = {int(k): v for k, v in d["per_detail"].items()}
-        return cls(**d)
+@dataclasses.dataclass
+class Trajectory:
+    """One judged rollout with everything the training update consumes."""
+    instance_id: str
+    seed: int
+    episode: Episode
+    judgment: JudgeResult
+    agent_turns: List[AgentTurn]
+    reward: float
+    advantage: float = 0.0

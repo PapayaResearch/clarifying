@@ -7,22 +7,20 @@ from uaug.utils.schema import Episode, JudgeResult, TaskInstance
 from uaug.utils.wrappers import IOSchema, LanguageModel
 
 
-class CheckInput(IOSchema):
-    """Input schema for one rubric check."""
-    check: str = Field(description="The yes/no question about the image description to verify.")
-    text: str = Field(description="The text to judge the check against - nothing else may be used.")
+def check_input_schema(check_description: str, text_description: str) -> Type[IOSchema]:
+    class CheckInput(IOSchema):
+        """Input schema for one rubric check."""
+        check: str = Field(description=check_description)
+        text: str = Field(description=text_description)
 
-
-class CheckOutput(IOSchema):
-    """Output schema for one rubric check."""
-    satisfied: bool = Field(description="True only if the text states or clearly entails the fact.")
-
-
-def check_input_schema() -> Type[IOSchema]:
     return CheckInput
 
 
-def check_output_schema() -> Type[IOSchema]:
+def check_output_schema(satisfied_description: str) -> Type[IOSchema]:
+    class CheckOutput(IOSchema):
+        """Output schema for one rubric check."""
+        satisfied: bool = Field(description=satisfied_description)
+
     return CheckOutput
 
 

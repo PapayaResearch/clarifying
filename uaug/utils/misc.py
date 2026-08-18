@@ -1,7 +1,5 @@
 import dataclasses
 import json
-import random
-import statistics
 from pathlib import Path
 from typing import Any, Iterable, List
 
@@ -52,12 +50,3 @@ def write_jsonl(path: str | Path, rows: Iterable[Any]):
             if dataclasses.is_dataclass(row):
                 row = dataclasses.asdict(row)
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
-
-
-def bootstrap_ci(values: List[float], n_resamples: int = 1000, seed: int = 0) -> List[float]:
-    """95% percentile bootstrap CI for the mean, resampling over instances."""
-    if not values:
-        return [None, None]
-    rng = random.Random(seed)
-    means = sorted(statistics.mean(rng.choices(values, k=len(values))) for _ in range(n_resamples))
-    return [round(means[int(0.025 * n_resamples)], 3), round(means[int(0.975 * n_resamples) - 1], 3)]
