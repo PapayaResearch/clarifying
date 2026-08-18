@@ -1,5 +1,4 @@
 import dataclasses
-import random
 from typing import Type
 
 from pydantic import Field
@@ -32,8 +31,6 @@ class RubricJudge:
     """Scores an episode: per redacted detail, was it elicited (transcript) and delivered (final output)?"""
 
     checker: LanguageModel
-    preserved_sample: int
-    random_seed: int
 
     def _satisfied(self, check: str, text: str) -> bool:
         response = self.checker.get_response(check=check, text=text)
@@ -55,13 +52,6 @@ class RubricJudge:
         eps_c = sum(w * (not per_detail[i]["elicited"]) for i, w in weights.items()) / total
         eps_e = sum(w * (per_detail[i]["elicited"] and not per_detail[i]["delivered"]) for i, w in weights.items()) / total
 
-        # Preserved: a sample of kept details must survive into the final output
-        preserved = None
-        if self.preserved_sample > 0 and instance.kept:
-            rng = random.Random(f"{self.random_seed}:{episode.instance_id}:{episode.seed}")
-            sample = rng.sample(instance.kept, min(self.preserved_sample, len(instance.kept)))
-            preserved = sum(self._satisfied(d.check, episode.final_output) for d in sample) / len(sample)
-
         return JudgeResult(
             instance_id=episode.instance_id,
             agent_name=episode.agent_name,
@@ -70,5 +60,4 @@ class RubricJudge:
             u_rec=u_rec,
             eps_c_hat=eps_c,
             eps_e_hat=eps_e,
-            preserved=preserved,
         )

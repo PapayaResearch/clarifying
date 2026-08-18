@@ -30,7 +30,6 @@ class TaskInstance:
     details: List[Detail]
     redacted_ids: List[int]
     eroded_prompt: str
-    budget: int
     split: str
 
     @property
@@ -90,7 +89,6 @@ class JudgeResult:
     u_rec: float
     eps_c_hat: float
     eps_e_hat: float
-    preserved: Optional[float] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return dataclasses.asdict(self)
