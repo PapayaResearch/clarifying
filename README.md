@@ -109,7 +109,7 @@ python -m uaug.training.run \
 
 ### Outputs
 ```
-results/training/<model>/<agent>/k_<k>/<reward>/<datetime>/
+results/training/<model>/<agent>/k_<k>/<reward>/<weighting>/<datetime>/
 ├── training_log.jsonl
 ├── trajectories.jsonl
 ├── checkpoints.jsonl
