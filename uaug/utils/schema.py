@@ -73,9 +73,9 @@ class JudgeResult:
     instance_id: str
     agent_name: str
     per_detail: Dict[int, Dict[str, bool]]
-    u_rec: float
-    eps_c_hat: float
-    eps_e_hat: float
+    u_rec: Dict[str, float]
+    eps_c_hat: Dict[str, float]
+    eps_e_hat: Dict[str, float]
 
 
 @dataclasses.dataclass

@@ -24,7 +24,6 @@ class EvaluationPipeline:
 
     instances_dir: str
     split: str
-    importance_weighting: str
     agent: Asker
     user: UserSimulator
     judge: RubricJudge
@@ -47,7 +46,7 @@ class EvaluationPipeline:
             final_output=final_output,
             n_questions=n_questions,
         )
-        return episode, self.judge.judge(instance, episode, self.importance_weighting)
+        return episode, self.judge.judge(instance, episode)
 
     def run(self, results_dir: str, max_workers: int = 8):
         instances = self._load_instances()
@@ -77,11 +76,13 @@ class EvaluationPipeline:
             "agent": self.agent.name,
             "mode": self.agent.mode,
             "split": self.split,
-            "importance_weighting": self.importance_weighting,
             "n_episodes": len(episodes),
-            "u_rec_mean": round(statistics.mean(j.u_rec for j in judgments), 3) if judgments else None,
-            "eps_c_hat_mean": round(statistics.mean(j.eps_c_hat for j in judgments), 3) if judgments else None,
-            "eps_e_hat_mean": round(statistics.mean(j.eps_e_hat for j in judgments), 3) if judgments else None,
+            # Every judged metric under both weightings, e.g. u_rec_llm_mean and u_rec_equal_mean
+            **{
+                f"{metric}_{weighting}_mean": round(statistics.mean(getattr(j, metric)[weighting] for j in judgments), 3) if judgments else None
+                for metric in ("u_rec", "eps_c_hat", "eps_e_hat")
+                for weighting in ("llm", "equal")
+            },
             "n_questions_mean": round(statistics.mean(e.n_questions for e in episodes), 2) if episodes else None,
             "planning_gap_mean": round(statistics.mean(e.n_questions - k_by_instance[e.instance_id] for e in episodes), 2) if episodes else None,
         }

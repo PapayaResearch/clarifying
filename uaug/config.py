@@ -181,7 +181,6 @@ class Evaluation:
     _target_: str
     instances_dir: str
     split: str
-    importance_weighting: str
     agent: Agent
     user: User
     judge: Judge
