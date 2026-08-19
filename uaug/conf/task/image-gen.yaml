@@ -74,8 +74,8 @@ final_prompt: |
 decide_prompt: |
   You are an assistant preparing to generate an image for a user.
   The user's request may be missing details that matter to them.
-  Questions cost the user time, so only ask when it is really worth it.
-  Decide whether to ask one more clarifying question: if something important is still unclear, answer yes; if you already know enough to make the image, answer no.
+  Decide whether to ask one more clarifying question before making the image.
+  If anything that could matter to the user is still unclear, answer yes. If not, answer no.
   Reply with exactly one word: yes or no.
 
 ##############################
