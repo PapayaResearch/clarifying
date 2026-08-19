@@ -10,14 +10,14 @@ class RewardFn(abc.ABC):
         return 0.0
 
     @abc.abstractmethod
-    def final_reward(self, episode: Episode, judgment: JudgeResult) -> float:
-        """Reward granted at episode end, after judging."""
+    def final_reward(self, episode: Episode, judgment: JudgeResult, weighting: str) -> float:
+        """Reward granted at episode end, after judging, under the chosen importance weighting."""
 
 
-def total_reward(reward_fn: RewardFn, episode: Episode, judgment: JudgeResult) -> float:
+def total_reward(reward_fn: RewardFn, episode: Episode, judgment: JudgeResult, weighting: str) -> float:
     """Undiscounted episode return: all shaping terms plus the terminal reward."""
     shaping = sum(reward_fn.step_reward(episode, t) for t in range(episode.n_questions))
-    return shaping + reward_fn.final_reward(episode, judgment)
+    return shaping + reward_fn.final_reward(episode, judgment, weighting)
 
 
 @dataclasses.dataclass
@@ -26,8 +26,8 @@ class TerminalReward(RewardFn):
 
     name: str = "terminal"
 
-    def final_reward(self, episode: Episode, judgment: JudgeResult) -> float:
-        return judgment.u_rec
+    def final_reward(self, episode: Episode, judgment: JudgeResult, weighting: str) -> float:
+        return judgment.u_rec[weighting]
 
 
 @dataclasses.dataclass
@@ -40,5 +40,5 @@ class TerminalCostedReward(RewardFn):
     def step_reward(self, episode: Episode, t: int) -> float:
         return -self.question_cost
 
-    def final_reward(self, episode: Episode, judgment: JudgeResult) -> float:
-        return judgment.u_rec
+    def final_reward(self, episode: Episode, judgment: JudgeResult, weighting: str) -> float:
+        return judgment.u_rec[weighting]

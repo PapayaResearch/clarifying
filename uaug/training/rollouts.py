@@ -1,81 +1,68 @@
-"""Backend-blind rollout collection: policy -> episode -> judgment -> reward.
-
-Mirrors EpisodePipeline._run_episode but records, for every agent turn, the exact
-messages the policy saw and the Completion it returned (with backend meta), which
-is what trainers consume.
-"""
-
-import dataclasses
 import statistics
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-from uaug.judging.judge import RubricJudge
-from uaug.schema import Episode, JudgeResult, TaskInstance, Turn
-from uaug.episodes.user import UserSimulator
-from uaug.training.policy import Completion, Policy, build_messages, parse_action
+from uaug.utils.judge import RubricJudge
+from uaug.utils.schema import AgentTurn, Completion, Episode, TaskInstance, Trajectory, Turn
+from uaug.evaluation.agents import build_messages, parse_decision
+from uaug.evaluation.user import UserSimulator
 from uaug.training.rewards import RewardFn, total_reward
-
-
-@dataclasses.dataclass
-class AgentTurn:
-    """One policy call: the prompt messages at sampling time and the sampled completion."""
-    messages: List[Dict[str, str]]
-    completion: Completion
-
-
-@dataclasses.dataclass
-class Trajectory:
-    instance_id: str
-    seed: int
-    episode: Episode
-    judgment: JudgeResult
-    agent_turns: List[AgentTurn]
-    reward: float
-    advantage: float = 0.0
+from uaug.training.tinker import TinkerModel
 
 
 def collect_trajectory(
     instance: TaskInstance,
-    policy: Policy,
+    model: TinkerModel,
     user: UserSimulator,
     judge: RubricJudge,
     reward_fn: RewardFn,
-    policy_prompt: str,
-    seed: int,
-    budget_override: Optional[int] = None,
+    mode: str,
+    max_questions: int,
+    importance_weighting: str,
+    ask_prompt: str,
+    final_prompt: str,
+    decide_prompt: str,
 ) -> Trajectory:
-    budget = budget_override if budget_override is not None else instance.budget
+    if mode not in ("fixed", "dynamic"):
+        raise ValueError(f"Unknown rollout mode: {mode!r} (expected 'fixed' or 'dynamic')")
+    if importance_weighting not in ("llm", "equal"):
+        raise ValueError(f"Unknown importance weighting: {importance_weighting!r} (expected 'llm' or 'equal')")
+
     turns: List[Turn] = []
     agent_turns: List[AgentTurn] = []
-    n_questions = 0
+    request = instance.eroded_prompt
 
-    while True:
-        messages = build_messages(policy_prompt, instance.eroded_prompt, turns, budget - n_questions)
-        completion = policy.complete(messages, seed=seed)
+    def sample(messages: List[Dict[str, str]]) -> Completion:
+        completion = model.complete(messages)
         agent_turns.append(AgentTurn(messages=messages, completion=completion))
-        kind, text = parse_action(completion.text)
-        if kind == "ask" and n_questions < budget:
-            answer = user.answer(instance, text, turns)
-            turns.append(Turn(role="agent_question", text=text))
-            turns.append(Turn(role="user_answer", text=answer))
-            n_questions += 1
-        else:
-            turns.append(Turn(role="agent_final", text=text))
-            break
+        return completion
+
+    def wants_question(asked: int) -> bool:
+        if asked >= max_questions:
+            return False
+        if mode == "fixed":
+            return True
+        return parse_decision(sample(build_messages(decide_prompt, request, turns)).text)
+
+    n = 0
+    while wants_question(n):
+        question = sample(build_messages(ask_prompt, request, turns)).text.strip()
+        answer = user.answer(instance, question, turns)
+        turns.append(Turn(role="agent_question", text=question))
+        turns.append(Turn(role="user_answer", text=answer))
+        n += 1
+    final = sample(build_messages(final_prompt, request, turns)).text.strip()
 
     episode = Episode(
         instance_id=instance.instance_id,
-        agent_name="policy",
-        turns=turns,
-        final_output=text,
-        n_questions=n_questions,
-        seed=seed,
+        agent_name="training",
+        turns=turns + [Turn(role="agent_final", text=final)],
+        final_output=final,
+        n_questions=n,
     )
     judgment = judge.judge(instance, episode)
-    reward = total_reward(reward_fn, episode, judgment)
+    reward = total_reward(reward_fn, episode, judgment, importance_weighting)
     return Trajectory(
         instance_id=instance.instance_id,
-        seed=seed,
         episode=episode,
         judgment=judgment,
         agent_turns=agent_turns,
@@ -83,20 +70,12 @@ def collect_trajectory(
     )
 
 
-def assign_group_advantages(trajectories: List[Trajectory], normalize: bool = False) -> None:
-    """GRPO-style advantages: center rewards within each instance's rollout group.
-
-    With normalize=True also divide by the group's reward std (skipped for
-    degenerate groups). Mutates trajectories in place.
-    """
+def assign_group_advantages(trajectories: List[Trajectory]) -> None:
+    """GRPO-style advantages: center rewards within each instance's rollout group."""
     groups: Dict[str, List[Trajectory]] = {}
     for trajectory in trajectories:
         groups.setdefault(trajectory.instance_id, []).append(trajectory)
     for group in groups.values():
         mean = statistics.mean(t.reward for t in group)
-        std = statistics.pstdev(t.reward for t in group) if len(group) > 1 else 0.0
         for trajectory in group:
-            advantage = trajectory.reward - mean
-            if normalize and std > 1e-8:
-                advantage /= std
-            trajectory.advantage = advantage
+            trajectory.advantage = trajectory.reward - mean
