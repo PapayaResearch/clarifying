@@ -26,7 +26,7 @@ general:
   # Details redacted per instance
   k: 3
   # Maximum number of parallel workers
-  max_workers: 8
+  max_workers: 32
   # Random seed for reproducibility
   random_seed: 42
 
