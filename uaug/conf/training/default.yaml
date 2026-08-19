@@ -1,4 +1,4 @@
-# Reward function and training backend are swappable config groups (settled design rule)
+# Swappable config groups
 defaults:
   - reward: terminal_costed
   - trainer: tinker
@@ -8,29 +8,33 @@ defaults:
 _target_: uaug.training.pipeline.TrainingPipeline
 
 # Synthesis results directory holding instances.<split>.jsonl
-instances_dir: null
+instances_dir: ???
 # Which split to train on
 split: train
-# Override the per-instance question budget (null = use instance.budget)
-budget_override: null
+# Fixed or dynamic mode
+mode: ${agent.mode}
+# Maximum number of questions the agent can ask
+max_questions: ${agent.max_questions}
+# Judge weighting over redacted details ("llm" or "equal")
+importance_weighting: llm
 
-# Number of trainer updates
-n_iterations: 40
+# Number of training iterations
+n_iterations: 50
 # Instances sampled per iteration
-instances_per_iteration: 8
-# Rollouts per instance (GRPO-style group; advantages are centered within the group)
+instances_per_iteration: 32
+# Rollouts per instance (GRPO-style group)
 group_size: 8
-# Save a checkpoint every N iterations (the final iteration always saves)
+# Save a checkpoint every N iterations
 save_every: 10
-# Also divide group advantages by the group reward std
-normalize_advantages: false
 
-# System prompt for the trainable policy (QUESTION:/FINAL: action convention)
-policy_prompt: ${prompt.policy_prompt}
+# Prompts (same as evaluation prompts)
+ask_prompt: ${agent.ask_prompt}
+final_prompt: ${agent.final_prompt}
+decide_prompt: ${agent.decide_prompt}
 # Seed for instance sampling
 random_seed: ${general.random_seed}
 
-# User simulator (selected via the user config group)
+# User simulator
 user: ${user}
-# Rubric judge (selected via the judge config group)
+# Rubric judge
 judge: ${judge}

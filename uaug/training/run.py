@@ -26,11 +26,11 @@ def main(cfg: Config):
 
     # Set up logging
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    # Training runs are filed under the model under test (the orchestration llm is env-side)
-    model_name = cfg.model.name.replace("/", "_")
-    log_dir = os.path.join(cfg.logging.log_dir, cfg.dataset.name, "training", model_name)
+    log_dir = os.path.join(cfg.logging.log_dir, "training")
     log_file = os.path.join(log_dir, current_date + ".log")
-    results_dir = os.path.join(cfg.logging.results_dir, cfg.dataset.name, "training", model_name, current_date)
+    results_dir = os.path.join(
+        cfg.logging.results_dir, "training", cfg.model.name, cfg.agent.name, f"k_{cfg.general.k}", cfg.training.reward.name, current_date
+    )
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(results_dir, exist_ok=True)
 
@@ -48,7 +48,7 @@ def main(cfg: Config):
     print(f"Logging to: {log_file}")
     logging.info("Logging to: %s", log_file)
 
-    # Save config near outputs before the (long) training run starts
+    # Save config near outputs before the run starts
     with open(os.path.join(results_dir, "config.yaml"), "w", encoding="utf-8") as outfile:
         outfile.write(cfg_yaml)
 

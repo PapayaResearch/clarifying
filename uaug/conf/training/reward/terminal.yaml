@@ -1,2 +1,4 @@
 # Hydra target class
 _target_: uaug.training.rewards.TerminalReward
+# Display name
+name: terminal

@@ -1,4 +1,6 @@
 # Hydra target class
 _target_: uaug.training.rewards.TerminalCostedReward
-# Reward deducted per question asked (u_rec is on a 0-1 scale)
-question_cost: 0.05
+# Display name
+name: terminal_costed
+# Reward deducted per question asked
+question_cost: 0.01

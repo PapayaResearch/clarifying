@@ -161,12 +161,11 @@ class Training:
     instances_per_iteration: int
     group_size: int
     save_every: int
-    normalize_advantages: bool
     ask_prompt: str
     final_prompt: str
     decide_prompt: str
     random_seed: int
-    reward: Any  # shape depends on the conf/training/reward/* group choice
+    reward: Any
     trainer: Trainer
     user: User
     judge: Judge

@@ -1,24 +1,17 @@
-"""Reward functions for RL training.
-
-The reward is a swappable module behind the two-method RewardFn protocol, selected
-via conf/training/reward/*. Stage B uses terminal rewards only; Stage C adds
-per-question shaping from a value ensemble (critics.py).
-"""
-
+import abc
 import dataclasses
-from typing import Protocol
 
-from uaug.schema import Episode, JudgeResult
+from uaug.utils.schema import Episode, JudgeResult
 
 
-class RewardFn(Protocol):
+class RewardFn(abc.ABC):
     def step_reward(self, episode: Episode, t: int) -> float:
-        """Shaping reward for the agent's t-th question (0 for terminal-only rewards)."""
-        ...
+        """Shaping reward for the agent's t-th question (default: none)."""
+        return 0.0
 
+    @abc.abstractmethod
     def final_reward(self, episode: Episode, judgment: JudgeResult) -> float:
         """Reward granted at episode end, after judging."""
-        ...
 
 
 def total_reward(reward_fn: RewardFn, episode: Episode, judgment: JudgeResult) -> float:
@@ -28,21 +21,21 @@ def total_reward(reward_fn: RewardFn, episode: Episode, judgment: JudgeResult) -
 
 
 @dataclasses.dataclass
-class TerminalReward:
-    """Stage B, hard-budget variant: reward = importance-weighted recovery, questions are free."""
+class TerminalReward(RewardFn):
+    """Recovery only: reward = importance-weighted recovery, questions are free."""
 
-    def step_reward(self, episode: Episode, t: int) -> float:
-        return 0.0
+    name: str = "terminal"
 
     def final_reward(self, episode: Episode, judgment: JudgeResult) -> float:
         return judgment.u_rec
 
 
 @dataclasses.dataclass
-class TerminalCostedReward:
-    """Stage B default: reward = u_rec - c * n_questions."""
+class TerminalCostedReward(RewardFn):
+    """Recovery minus question cost: reward = u_rec - c * n_questions."""
 
     question_cost: float
+    name: str = "terminal_costed"
 
     def step_reward(self, episode: Episode, t: int) -> float:
         return -self.question_cost

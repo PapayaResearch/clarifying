@@ -1,15 +1,11 @@
-# Hydra target class (needs TINKER_API_KEY in .env; pip install -e .[train])
-_target_: uaug.training.trainers.TinkerTrainer
-# Trainer name (used in logs)
-name: tinker_pg
-# Tinker base model to attach LoRA to (from the model group; provider must be tinker)
+# Hydra target class (needs TINKER_API_KEY in .env)
+_target_: uaug.training.tinker.TinkerTrainer
+# Tinker base model to attach LoRA to
 base_model: ${model.model_id}
 # LoRA rank
 lora_rank: 32
 # Adam learning rate
 learning_rate: 1e-5
-# tinker-cookbook chat renderer (from the model group; null = Tinker's recommended)
-renderer_name: ${model.renderer_name}
 # Max sampled tokens per agent turn
 max_tokens: ${model.max_tokens}
 # Sampling temperature during rollouts
