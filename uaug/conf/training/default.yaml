@@ -1,0 +1,40 @@
+# Swappable config groups
+defaults:
+  - reward: terminal_costed
+  - trainer: tinker
+  - _self_
+
+# Hydra target class
+_target_: uaug.training.pipeline.TrainingPipeline
+
+# Synthesis results directory holding instances.<split>.jsonl
+instances_dir: ???
+# Which split to train on
+split: train
+# Fixed or dynamic mode
+mode: ${agent.mode}
+# Maximum number of questions the agent can ask
+max_questions: ${agent.max_questions}
+# Which weighting the reward optimizes ("llm" or "equal")
+importance_weighting: llm
+
+# Number of training iterations
+n_iterations: 50
+# Instances sampled per iteration
+instances_per_iteration: 32
+# Rollouts per instance (GRPO-style group)
+group_size: 8
+# Save a checkpoint every N iterations
+save_every: 10
+
+# Prompts (same as evaluation prompts)
+ask_prompt: ${agent.ask_prompt}
+final_prompt: ${agent.final_prompt}
+decide_prompt: ${agent.decide_prompt}
+# Seed for instance sampling
+random_seed: ${general.random_seed}
+
+# User simulator
+user: ${user}
+# Rubric judge
+judge: ${judge}

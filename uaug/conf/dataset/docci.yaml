@@ -1,0 +1,4 @@
+# Dataset name (used in results/logs paths)
+name: docci
+# Normalized sources file produced by scripts/setup_docci.py ({source_id, full_spec} per line)
+sources_path: ${hydra:runtime.cwd}/data/docci/sources.jsonl

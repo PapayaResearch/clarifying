@@ -1,0 +1,8 @@
+# Hydra target factory
+_target_: uaug.utils.api.create_api_call
+# litellm model identifier (needs GEMINI_API_KEY in .env)
+model: gemini/gemini-3-flash-preview
+# Seconds to sleep before each call (rate limiting)
+delay: 0
+# Extra litellm completion parameters
+params: {}

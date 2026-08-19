@@ -1,0 +1,91 @@
+##############################
+# Defaults
+##############################
+
+defaults:
+  - _self_
+  - synthesis: default
+  - training: default
+  - evaluation: default
+  # Orchestration LLM (used in synthesis, user simulator, judge)
+  - llm: gemini-3-flash
+  # Model under test (holds the conversation for every agent)
+  - model: qwen3-8b
+  # Dataset used (e.g., docci)
+  - dataset: docci
+  # Task to test (e.g., image-gen)
+  - task: image-gen
+  # Evaluation agent (e.g., zeroq, asker_fixed, asker_dynamic)
+  - agent: asker_fixed
+
+##############################
+# General Settings
+##############################
+
+general:
+  # Details redacted per instance
+  k: 3
+  # Maximum number of parallel workers
+  max_workers: 8
+  # Random seed for reproducibility
+  random_seed: 42
+
+##############################
+# Logging Settings
+##############################
+
+logging:
+  # Base directory for writing log files
+  log_dir: ${hydra:runtime.cwd}/logs
+  # Base directory for writing run results
+  results_dir: ${hydra:runtime.cwd}/results
+  # Also log to console
+  console: false
+
+##############################
+# User Simulator
+##############################
+
+user:
+  # Hydra target class
+  _target_: uaug.evaluation.user.UserSimulator
+  # The answering model
+  model:
+    _target_: uaug.utils.wrappers.LanguageModel
+    system_prompt: ${task.user_prompt}
+    input_schema:
+      _target_: uaug.evaluation.user.user_answer_input_schema
+      intent_description: |
+        The complete ground-truth specification of what the user wants.
+      conversation_description: |
+        The conversation so far, with the user's original request and any question-answer turns.
+      question_description: |
+        The assistant's clarification question to answer.
+    output_schema:
+      _target_: uaug.evaluation.user.user_answer_output_schema
+      answer_description: |
+        The user's answer to the question.
+    api_call: ${llm}
+
+##############################
+# Rubric Judge
+##############################
+
+judge:
+  # Hydra target class
+  _target_: uaug.utils.judge.RubricJudge
+  # The rubric checker: one yes/no verdict per (check, text) pair
+  checker:
+    _target_: uaug.utils.wrappers.LanguageModel
+    system_prompt: ${task.judge_prompt}
+    input_schema:
+      _target_: uaug.utils.judge.check_input_schema
+      check_description: |
+        The yes/no question about the text to verify.
+      text_description: |
+        The only text to judge the check against.
+    output_schema:
+      _target_: uaug.utils.judge.check_output_schema
+      satisfied_description: |
+        Whether the text states or clearly entails the fact.
+    api_call: ${llm}
