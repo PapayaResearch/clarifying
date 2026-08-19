@@ -12,8 +12,11 @@ from tinker_cookbook.tokenizer_utils import get_tokenizer
 from uaug.utils.schema import Completion, Trajectory
 
 
-def _renderer(base_model: str, tokenizer) -> Any:
-    return renderers.get_renderer(model_info.get_recommended_renderer_name(base_model), tokenizer)
+def _renderer(base_model: str, tokenizer, thinking: bool) -> Any:
+    name = model_info.get_recommended_renderer_name(base_model)
+    if not thinking:
+        name = f"{name}_disable_thinking"
+    return renderers.get_renderer(name, tokenizer)
 
 
 def _sampling_params(renderer, max_tokens: int, temperature: float):
@@ -32,13 +35,19 @@ class TinkerModel:
 
     def complete(self, messages: List[Dict[str, str]]) -> Completion:
         prompt = self.renderer.build_generation_prompt(messages)
-        result = self.sampling_client.sample(
-            prompt=prompt, sampling_params=self.sampling_params, num_samples=1
-        ).result()
-        sequence = result.sequences[0]
-        # get_text_content strips any <think> block, so text is only the visible answer
-        message, _ = self.renderer.parse_response(sequence.tokens)
-        text = get_text_content(message).strip()
+        for _ in range(2):
+            result = self.sampling_client.sample(
+                prompt=prompt, sampling_params=self.sampling_params, num_samples=1
+            ).result()
+            sequence = result.sequences[0]
+            # get_text_content strips any <think> block, so text is only the visible answer
+            message, _ = self.renderer.parse_response(sequence.tokens)
+            text = get_text_content(message).strip()
+            if "<think>" not in text:
+                break
+            # A think block that hit max_tokens before closing leaks raw reasoning: resample once
+            logging.warning("Unclosed <think> block in completion (%d tokens), resampling", len(sequence.tokens))
+        text = text.split("</think>")[-1].split("<think>")[0].strip()
         # Token ids and logprobs for the training update
         meta = {
             "prompt_tokens": prompt.to_ints(),
@@ -48,14 +57,14 @@ class TinkerModel:
         return Completion(text=text, meta=meta)
 
 
-def load_model(checkpoint: Optional[str], base_model: str, max_tokens: int, temperature: float) -> TinkerModel:
+def load_model(checkpoint: Optional[str], base_model: str, max_tokens: int, temperature: float, thinking: bool) -> TinkerModel:
     """Base weights (checkpoint null) or a trained sampler checkpoint as a TinkerModel."""
     service_client = tinker.ServiceClient()
     if checkpoint:
         sampling_client = service_client.create_sampling_client(model_path=checkpoint)
     else:
         sampling_client = service_client.create_sampling_client(base_model=base_model)
-    renderer = _renderer(base_model, get_tokenizer(base_model))
+    renderer = _renderer(base_model, get_tokenizer(base_model), thinking)
     return TinkerModel(sampling_client, renderer, _sampling_params(renderer, max_tokens, temperature))
 
 
@@ -68,13 +77,14 @@ class TinkerTrainer:
     learning_rate: float
     max_tokens: int
     temperature: float
+    thinking: bool
 
     def __post_init__(self):
         service_client = tinker.ServiceClient()
         self.training_client = service_client.create_lora_training_client(
             base_model=self.base_model, rank=self.lora_rank
         )
-        self.renderer = _renderer(self.base_model, self.training_client.get_tokenizer())
+        self.renderer = _renderer(self.base_model, self.training_client.get_tokenizer(), self.thinking)
         self.sampling_params = _sampling_params(self.renderer, self.max_tokens, self.temperature)
 
     def make_model(self) -> TinkerModel:

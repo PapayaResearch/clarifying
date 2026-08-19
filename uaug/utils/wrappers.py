@@ -27,11 +27,12 @@ class ChatModel:
     checkpoint: Optional[str]
     max_tokens: int
     temperature: float
+    thinking: bool
 
     @property
     def model(self) -> TinkerModel:
         """The served Tinker model (built lazily, shared across instances)."""
-        key = (self.model_id, self.checkpoint, self.max_tokens, self.temperature)
+        key = (self.model_id, self.checkpoint, self.max_tokens, self.temperature, self.thinking)
         with _LOCK:
             if key not in _MODELS:
                 _MODELS[key] = load_model(
@@ -39,6 +40,7 @@ class ChatModel:
                     base_model=self.model_id,
                     max_tokens=self.max_tokens,
                     temperature=self.temperature,
+                    thinking=self.thinking,
                 )
             return _MODELS[key]
 

@@ -10,3 +10,5 @@ checkpoint: null
 max_tokens: 2048
 # Sampling temperature for agent calls (0 = greedy; training rollouts use training.temperature)
 temperature: 0.0
+# gpt-oss has no disable-thinking renderer, so this must stay true
+thinking: true

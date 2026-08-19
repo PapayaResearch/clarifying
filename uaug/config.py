@@ -23,6 +23,7 @@ class Model:
     checkpoint: Optional[str]
     max_tokens: int
     temperature: float
+    thinking: bool
 
 
 @dataclass
@@ -147,6 +148,7 @@ class Trainer:
     learning_rate: float
     max_tokens: int
     temperature: float
+    thinking: bool
 
 
 @dataclass

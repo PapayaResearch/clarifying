@@ -10,3 +10,5 @@ checkpoint: null
 max_tokens: 2048
 # Sampling temperature for agent calls (0 = greedy; training rollouts use training.temperature)
 temperature: 0.0
+# Whether the model thinks before answering (false uses the disable-thinking renderer)
+thinking: false

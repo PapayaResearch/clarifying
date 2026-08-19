@@ -10,3 +10,5 @@ learning_rate: 1e-5
 max_tokens: ${model.max_tokens}
 # Sampling temperature during rollouts
 temperature: 1.0
+# Whether the model thinks during rollouts
+thinking: ${model.thinking}

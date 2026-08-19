@@ -140,6 +140,7 @@ python -m uaug.evaluation.run \
 - `evaluation.split`: `val` | `test`
 - `model.checkpoint`: Tinker sampler path from the training stage (`null` = base weights)
 - `model.temperature`: Agent sampling temperature (default 0 = greedy)
+- `model.thinking`: Whether the model thinks before answering (default `false`)
 - `general.max_workers`: Parallelization level
 
 ### Outputs
