@@ -10,7 +10,7 @@ The pipeline consists of the following stages, chained only by result paths:
 2. **Training**: RL fine-tune the asking policy with LoRA via the Tinker API
 3. **Evaluation**: Run agents against the simulated user and judge per-detail recovery
 
-The `llm` config group is the frozen environment for synthesis, the user simulator, and the judge (default `gemini-3-flash`). The `model` config group is the model under test that holds the conversation for every agent (default `qwen3-8b`, sampled via Tinker). The `task` config group holds the detail category vocabulary and every task-specific prompt, so a new domain is one yaml file.
+The `llm` config group is the frozen environment for synthesis, the user simulator, and the judge (default `gemini-3.5-flash-lite`). The `model` config group is the model under test that holds the conversation for every agent (default `qwen3-8b`, sampled via Tinker). The `task` config group holds the detail category vocabulary and every task-specific prompt.
 
 ## Installation
 
@@ -74,7 +74,7 @@ python -m uaug.synthesis.run
 
 ### Outputs
 ```
-results/synthesis/<task>/<dataset>/<llm>/k_<k>/<datetime>/
+results/<task>/<dataset>/synthesis/<llm>/k_<k>/<datetime>/
 ├── instances.train.jsonl
 ├── instances.val.jsonl
 ├── instances.test.jsonl
@@ -109,7 +109,7 @@ python -m uaug.training.run \
 
 ### Outputs
 ```
-results/training/<model>/<agent>/k_<k>/<reward>/<weighting>/<datetime>/
+results/<task>/<dataset>/training/<model>/<agent>/k_<k>/<reward>/<weighting>/<datetime>/
 ├── training_log.jsonl
 ├── trajectories.jsonl
 ├── checkpoints.jsonl
@@ -145,7 +145,7 @@ python -m uaug.evaluation.run \
 
 ### Outputs
 ```
-results/evaluation/<model>/<agent>/k_<k>/<base|checkpoint>/<datetime>/
+results/<task>/<dataset>/evaluation/<model>/<agent>/k_<k>/<base|checkpoint>/<datetime>/
 ├── episodes.jsonl
 ├── judgments.jsonl
 ├── summary.csv
