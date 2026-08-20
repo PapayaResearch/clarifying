@@ -5,7 +5,7 @@ base_model: ${model.model_id}
 # LoRA rank
 lora_rank: 32
 # Adam learning rate
-learning_rate: 1e-5
+learning_rate: 4e-5
 # Max sampled tokens per agent turn
 max_tokens: ${model.max_tokens}
 # Sampling temperature during rollouts

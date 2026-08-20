@@ -21,9 +21,9 @@ importance_weighting: llm
 # Number of training iterations
 n_iterations: 50
 # Instances sampled per iteration
-instances_per_iteration: 32
+instances_per_iteration: 16
 # Rollouts per instance (GRPO-style group)
-group_size: 8
+group_size: 16
 # Save a checkpoint every N iterations
 save_every: 10
 
