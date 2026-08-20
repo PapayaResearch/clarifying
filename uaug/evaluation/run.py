@@ -30,7 +30,8 @@ def main(cfg: Config):
     log_file = os.path.join(log_dir, current_date + ".log")
     weights = cfg.model.checkpoint.split("/")[-1] if cfg.model.checkpoint else "base"
     results_dir = os.path.join(
-        cfg.logging.results_dir, "evaluation", cfg.model.name, cfg.agent.name, f"k_{cfg.general.k}", weights, current_date
+        cfg.logging.results_dir, cfg.task.name, cfg.dataset.name, "evaluation", cfg.model.name, cfg.agent.name,
+        f"k_{cfg.general.k}", weights, current_date
     )
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(results_dir, exist_ok=True)

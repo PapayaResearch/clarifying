@@ -35,7 +35,7 @@ def main(cfg: Config):
     else:
         llm_name = cfg.llm.model.split("/")[-1]
         results_dir = os.path.join(
-            cfg.logging.results_dir, "synthesis", cfg.task.name, cfg.dataset.name, llm_name, f"k_{cfg.synthesis.k}", current_date
+            cfg.logging.results_dir, cfg.task.name, cfg.dataset.name, "synthesis", llm_name, f"k_{cfg.synthesis.k}", current_date
         )
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(results_dir, exist_ok=True)
