@@ -1,6 +1,8 @@
 import json
 import logging
+import random
 import threading
+import time
 import dataclasses
 from typing import Dict, List, Optional, Type
 
@@ -26,20 +28,18 @@ class ChatModel:
     model_id: str
     checkpoint: Optional[str]
     max_tokens: int
-    temperature: float
     thinking: bool
 
     @property
     def model(self) -> TinkerModel:
         """The served Tinker model (built lazily, shared across instances)."""
-        key = (self.model_id, self.checkpoint, self.max_tokens, self.temperature, self.thinking)
+        key = (self.model_id, self.checkpoint, self.max_tokens, self.thinking)
         with _LOCK:
             if key not in _MODELS:
                 _MODELS[key] = load_model(
                     checkpoint=self.checkpoint,
                     base_model=self.model_id,
                     max_tokens=self.max_tokens,
-                    temperature=self.temperature,
                     thinking=self.thinking,
                 )
             return _MODELS[key]
@@ -130,6 +130,9 @@ class LanguageModel:
                     e,
                 )
                 result = None
+                # Exponential backoff with jitter
+                if attempt + 1 < self.max_retries:
+                    time.sleep(2 ** attempt + random.uniform(0, 0.5))
 
         if result is None:
             logging.error("Language Model API call failed: no valid response after all retries.")

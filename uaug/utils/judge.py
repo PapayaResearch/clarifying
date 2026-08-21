@@ -1,4 +1,5 @@
 import dataclasses
+from concurrent.futures import ThreadPoolExecutor
 from typing import Type
 
 from pydantic import Field
@@ -35,10 +36,10 @@ class RubricJudge:
         return bool(response.satisfied) if response is not None else False
 
     def judge(self, instance: TaskInstance, episode: Episode) -> JudgeResult:
-        per_detail = {
-            detail.id: {"delivered": self._satisfied(detail.check, episode.final_output)}
-            for detail in instance.redacted
-        }
+        # The k checks are independent, so they run concurrently
+        with ThreadPoolExecutor(max_workers=len(instance.redacted)) as pool:
+            verdicts = pool.map(lambda d: self._satisfied(d.check, episode.final_output), instance.redacted)
+        per_detail = {detail.id: {"delivered": verdict} for detail, verdict in zip(instance.redacted, verdicts)}
 
         u_rec = {}
         for weighting in ("llm", "equal"):

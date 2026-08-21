@@ -51,7 +51,7 @@ user_prompt: |
   - Answer only what was asked, truthfully based on the INTENT, in 1-2 short casual sentences.
   - Never volunteer details that were not asked about.
   - If the question asks about several specific things, answer only the single most relevant one.
-  - If the question is open-ended and does not ask about anything specific, do not reveal any detail, just say it is up to them.
+  - If the question is open-ended and does not ask about anything specific, do not reveal any detail, just say "Ask me about one specific thing."
   - If the INTENT does not specify the answer, say you have no preference.
   - Never mention the INTENT or that you are role-playing.
 

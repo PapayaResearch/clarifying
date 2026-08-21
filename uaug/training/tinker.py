@@ -19,10 +19,8 @@ def _renderer(base_model: str, tokenizer, thinking: bool) -> Any:
     return renderers.get_renderer(name, tokenizer)
 
 
-def _sampling_params(renderer, max_tokens: int, temperature: float):
-    return tinker.types.SamplingParams(
-        max_tokens=max_tokens, temperature=temperature, stop=renderer.get_stop_sequences()
-    )
+def _sampling_params(renderer, max_tokens: int):
+    return tinker.types.SamplingParams(max_tokens=max_tokens, stop=renderer.get_stop_sequences())
 
 
 @dataclasses.dataclass
@@ -57,7 +55,7 @@ class TinkerModel:
         return Completion(text=text, meta=meta)
 
 
-def load_model(checkpoint: Optional[str], base_model: str, max_tokens: int, temperature: float, thinking: bool) -> TinkerModel:
+def load_model(checkpoint: Optional[str], base_model: str, max_tokens: int, thinking: bool) -> TinkerModel:
     """Base weights (checkpoint null) or a trained sampler checkpoint as a TinkerModel."""
     service_client = tinker.ServiceClient()
     if checkpoint:
@@ -65,7 +63,7 @@ def load_model(checkpoint: Optional[str], base_model: str, max_tokens: int, temp
     else:
         sampling_client = service_client.create_sampling_client(base_model=base_model)
     renderer = _renderer(base_model, get_tokenizer(base_model), thinking)
-    return TinkerModel(sampling_client, renderer, _sampling_params(renderer, max_tokens, temperature))
+    return TinkerModel(sampling_client, renderer, _sampling_params(renderer, max_tokens))
 
 
 @dataclasses.dataclass
@@ -76,7 +74,6 @@ class TinkerTrainer:
     lora_rank: int
     learning_rate: float
     max_tokens: int
-    temperature: float
     thinking: bool
 
     def __post_init__(self):
@@ -85,7 +82,11 @@ class TinkerTrainer:
             base_model=self.base_model, rank=self.lora_rank
         )
         self.renderer = _renderer(self.base_model, self.training_client.get_tokenizer(), self.thinking)
-        self.sampling_params = _sampling_params(self.renderer, self.max_tokens, self.temperature)
+        self.sampling_params = _sampling_params(self.renderer, self.max_tokens)
+
+    def load_state(self, state_path: str) -> None:
+        """Resume weights and Adam optimizer state from a saved state checkpoint."""
+        self.training_client.load_state_with_optimizer(state_path).result()
 
     def make_model(self) -> TinkerModel:
         """A model sampling from the latest weights (refresh after every update)."""
@@ -125,9 +126,11 @@ class TinkerTrainer:
         return {"n_datums": len(datums), **metrics}
 
     def save(self, results_dir: str, step: int) -> None:
-        """Save sampler weights."""
+        """Save sampler weights (for evaluation) and full training state (for resume)."""
         sampler = self.training_client.save_weights_for_sampler(name=f"step-{step:05d}")
+        state = self.training_client.save_state(name=f"state-{step:05d}")
         sampler_path = str(sampler.result().path)
+        state_path = str(state.result().path)
         with open(os.path.join(results_dir, "checkpoints.jsonl"), "a", encoding="utf-8") as f:
-            f.write(json.dumps({"step": step, "checkpoint": sampler_path}) + "\n")
-        logging.info("Saved Tinker sampler checkpoint for step %d: %s", step, sampler_path)
+            f.write(json.dumps({"step": step, "checkpoint": sampler_path, "state": state_path}) + "\n")
+        logging.info("Saved Tinker checkpoint for step %d: sampler %s, state %s", step, sampler_path, state_path)
