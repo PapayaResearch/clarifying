@@ -22,7 +22,6 @@ class Model:
     model_id: str
     checkpoint: Optional[str]
     max_tokens: int
-    temperature: float
     thinking: bool
 
 
@@ -147,7 +146,6 @@ class Trainer:
     lora_rank: int
     learning_rate: float
     max_tokens: int
-    temperature: float
     thinking: bool
 
 

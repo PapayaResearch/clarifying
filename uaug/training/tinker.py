@@ -19,10 +19,8 @@ def _renderer(base_model: str, tokenizer, thinking: bool) -> Any:
     return renderers.get_renderer(name, tokenizer)
 
 
-def _sampling_params(renderer, max_tokens: int, temperature: float):
-    return tinker.types.SamplingParams(
-        max_tokens=max_tokens, temperature=temperature, stop=renderer.get_stop_sequences()
-    )
+def _sampling_params(renderer, max_tokens: int):
+    return tinker.types.SamplingParams(max_tokens=max_tokens, stop=renderer.get_stop_sequences())
 
 
 @dataclasses.dataclass
@@ -57,7 +55,7 @@ class TinkerModel:
         return Completion(text=text, meta=meta)
 
 
-def load_model(checkpoint: Optional[str], base_model: str, max_tokens: int, temperature: float, thinking: bool) -> TinkerModel:
+def load_model(checkpoint: Optional[str], base_model: str, max_tokens: int, thinking: bool) -> TinkerModel:
     """Base weights (checkpoint null) or a trained sampler checkpoint as a TinkerModel."""
     service_client = tinker.ServiceClient()
     if checkpoint:
@@ -65,7 +63,7 @@ def load_model(checkpoint: Optional[str], base_model: str, max_tokens: int, temp
     else:
         sampling_client = service_client.create_sampling_client(base_model=base_model)
     renderer = _renderer(base_model, get_tokenizer(base_model), thinking)
-    return TinkerModel(sampling_client, renderer, _sampling_params(renderer, max_tokens, temperature))
+    return TinkerModel(sampling_client, renderer, _sampling_params(renderer, max_tokens))
 
 
 @dataclasses.dataclass
@@ -76,7 +74,6 @@ class TinkerTrainer:
     lora_rank: int
     learning_rate: float
     max_tokens: int
-    temperature: float
     thinking: bool
 
     def __post_init__(self):
@@ -85,7 +82,7 @@ class TinkerTrainer:
             base_model=self.base_model, rank=self.lora_rank
         )
         self.renderer = _renderer(self.base_model, self.training_client.get_tokenizer(), self.thinking)
-        self.sampling_params = _sampling_params(self.renderer, self.max_tokens, self.temperature)
+        self.sampling_params = _sampling_params(self.renderer, self.max_tokens)
 
     def make_model(self) -> TinkerModel:
         """A model sampling from the latest weights (refresh after every update)."""
