@@ -3,7 +3,7 @@ from typing import Dict, List
 
 from uaug.utils.judge import RubricJudge
 from uaug.utils.schema import AgentTurn, Completion, Episode, TaskInstance, Trajectory, Turn
-from uaug.evaluation.agents import build_messages, parse_decision
+from uaug.evaluation.agents import build_chat_messages, build_transcript_messages, parse_decision
 from uaug.evaluation.user import UserSimulator
 from uaug.training.rewards import RewardFn, total_reward
 from uaug.training.tinker import TinkerModel
@@ -41,16 +41,16 @@ def collect_trajectory(
             return False
         if mode == "fixed":
             return True
-        return parse_decision(sample(build_messages(decide_prompt, request, turns)).text)
+        return parse_decision(sample(build_transcript_messages(decide_prompt, request, turns)).text)
 
     n = 0
     while wants_question(n):
-        question = sample(build_messages(ask_prompt, request, turns)).text.strip()
+        question = sample(build_chat_messages(ask_prompt, request, turns)).text.strip()
         answer = user.answer(instance, question, turns)
         turns.append(Turn(role="agent_question", text=question))
         turns.append(Turn(role="user_answer", text=answer))
         n += 1
-    final = sample(build_messages(final_prompt, request, turns)).text.strip()
+    final = sample(build_transcript_messages(final_prompt, request, turns)).text.strip()
 
     episode = Episode(
         instance_id=instance.instance_id,
