@@ -69,13 +69,11 @@ class AgentTurn:
 
 @dataclasses.dataclass
 class JudgeResult:
-    """Per-detail verdicts for an episode, split into elicited (in transcript) and delivered (in final output)."""
+    """Per-detail verdicts for an episode, aggregated into u_rec under both weightings."""
     instance_id: str
     agent_name: str
     per_detail: Dict[int, Dict[str, bool]]
     u_rec: Dict[str, float]
-    eps_c_hat: Dict[str, float]
-    eps_e_hat: Dict[str, float]
 
 
 @dataclasses.dataclass

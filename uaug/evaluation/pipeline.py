@@ -77,10 +77,8 @@ class EvaluationPipeline:
             "mode": self.agent.mode,
             "split": self.split,
             "n_episodes": len(episodes),
-            # Every judged metric under both weightings, e.g. u_rec_llm_mean and u_rec_equal_mean
             **{
-                f"{metric}_{weighting}_mean": round(statistics.mean(getattr(j, metric)[weighting] for j in judgments), 3) if judgments else None
-                for metric in ("u_rec", "eps_c_hat", "eps_e_hat")
+                f"u_rec_{weighting}_mean": round(statistics.mean(j.u_rec[weighting] for j in judgments), 3) if judgments else None
                 for weighting in ("llm", "equal")
             },
             "n_questions_mean": round(statistics.mean(e.n_questions for e in episodes), 2) if episodes else None,

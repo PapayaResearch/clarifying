@@ -26,7 +26,7 @@ def check_output_schema(satisfied_description: str) -> Type[IOSchema]:
 
 @dataclasses.dataclass
 class RubricJudge:
-    """Scores an episode: per redacted detail, was it elicited (transcript) and delivered (final output)?"""
+    """Scores an episode: per redacted detail, was it delivered in the final output?"""
 
     checker: LanguageModel
 
@@ -35,29 +35,20 @@ class RubricJudge:
         return bool(response.satisfied) if response is not None else False
 
     def judge(self, instance: TaskInstance, episode: Episode) -> JudgeResult:
-        answers = "\n".join(t.text for t in episode.turns if t.role == "user_answer")
+        per_detail = {
+            detail.id: {"delivered": self._satisfied(detail.check, episode.final_output)}
+            for detail in instance.redacted
+        }
 
-        per_detail = {}
-        for detail in instance.redacted:
-            # Elicited: the user's answers revealed it (the agent's own words don't count as information)
-            elicited = bool(answers) and self._satisfied(detail.check, answers)
-            delivered = self._satisfied(detail.check, episode.final_output)
-            per_detail[detail.id] = {"elicited": elicited, "delivered": delivered}
-
-        # Verdicts are weighting-independent, so both aggregations come from the same checks
-        u_rec, eps_c, eps_e = {}, {}, {}
+        u_rec = {}
         for weighting in ("llm", "equal"):
             weights = {d.id: max(d.importance, 0.05) if weighting == "llm" else 1.0 for d in instance.redacted}
             total = sum(weights.values())
             u_rec[weighting] = sum(w * per_detail[i]["delivered"] for i, w in weights.items()) / total
-            eps_c[weighting] = sum(w * (not per_detail[i]["elicited"]) for i, w in weights.items()) / total
-            eps_e[weighting] = sum(w * (per_detail[i]["elicited"] and not per_detail[i]["delivered"]) for i, w in weights.items()) / total
 
         return JudgeResult(
             instance_id=episode.instance_id,
             agent_name=episode.agent_name,
             per_detail=per_detail,
             u_rec=u_rec,
-            eps_c_hat=eps_c,
-            eps_e_hat=eps_e,
         )
