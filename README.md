@@ -153,3 +153,5 @@ results/<task>/<dataset>/evaluation/<model>/<agent>/k_<k>/<base|checkpoint>/<dat
 ```
 
 **Summary CSV**: one row per run (agent, mode, split, u_rec means under both weightings, mean questions), with rows concatenated across runs forming the comparison table
+
+**Instance visuals**: `python scripts/visualize_eval.py <eval_dir> -n <n>` renders n random episodes from an evaluation run as one image each (ground-truth intent, redacted details with judge verdicts, the interaction as a chat, final output, metrics) into `<eval_dir>/figures/`
