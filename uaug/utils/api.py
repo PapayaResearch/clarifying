@@ -17,6 +17,7 @@ def create_api_call(model: str, delay: float, params: dict) -> Callable:
             messages=messages,
             tools=tools,
             response_format=response_format,
+            timeout=30,
             **params
         )
     return api_call
