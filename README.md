@@ -124,7 +124,7 @@ results/<task>/<dataset>/training/<model>/<agent>/k_<k>/<reward>/<weighting>/<da
 
 ## 3. Evaluation
 
-Run one agent over instances and judge every episode: the agent sees only the eroded request, asks questions per its mode, and commits a final description. The judge checks each redacted detail in the user's answers (ε̂C if never elicited) and in the final output (ε̂E if elicited but dropped), aggregated into the recovery metric `u_rec` under both weightings (`llm` importance-weighted and `equal` unweighted). `model.checkpoint=null` evaluates the base weights, and a training-stage checkpoint evaluates the fine-tuned model through the identical code path.
+Run one agent over instances and judge every episode: the agent sees only the eroded request, asks questions per its mode, and commits a final description. The judge checks each redacted detail against the final output, aggregated into the recovery metric `u_rec` under both weightings (`llm` importance-weighted and `equal` unweighted). `model.checkpoint=null` evaluates the base weights, and a training-stage checkpoint evaluates the fine-tuned model through the identical code path.
 
 ### Run
 ```bash
@@ -154,4 +154,4 @@ results/<task>/<dataset>/evaluation/<model>/<agent>/k_<k>/<base|checkpoint>/<dat
 └── config.yaml
 ```
 
-**Summary CSV**: one row per run (agent, mode, split, u_rec/ε̂C/ε̂E means under both weightings, mean questions), with rows concatenated across runs forming the comparison table
+**Summary CSV**: one row per run (agent, mode, split, u_rec means under both weightings, mean questions), with rows concatenated across runs forming the comparison table
