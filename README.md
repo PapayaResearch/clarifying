@@ -105,7 +105,6 @@ python -m uaug.training.run \
 - `training.instances_per_iteration` / `training.group_size`: Rollout batch shape
 - `training.save_every`: Checkpoint interval (the final iteration always saves)
 - `training.trainer.lora_rank` / `training.trainer.learning_rate`: LoRA update knobs
-- `training.trainer.temperature`: Rollout sampling temperature
 
 ### Outputs
 ```
@@ -139,7 +138,6 @@ python -m uaug.evaluation.run \
 - `agent.max_questions`: Explicit override of the derived question count/cap
 - `evaluation.split`: `val` | `test`
 - `model.checkpoint`: Tinker sampler path from the training stage (`null` = base weights)
-- `model.temperature`: Agent sampling temperature (default 0 = greedy)
 - `model.thinking`: Whether the model thinks before answering (default `false`)
 - `general.max_workers`: Parallelization level
 
