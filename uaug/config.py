@@ -157,6 +157,7 @@ class Training:
     mode: str
     max_questions: int
     importance_weighting: str
+    resume_dir: Optional[str]
     n_iterations: int
     instances_per_iteration: int
     group_size: int

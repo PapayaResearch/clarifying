@@ -84,6 +84,10 @@ class TinkerTrainer:
         self.renderer = _renderer(self.base_model, self.training_client.get_tokenizer(), self.thinking)
         self.sampling_params = _sampling_params(self.renderer, self.max_tokens)
 
+    def load_state(self, state_path: str) -> None:
+        """Resume weights and Adam optimizer state from a saved state checkpoint."""
+        self.training_client.load_state_with_optimizer(state_path).result()
+
     def make_model(self) -> TinkerModel:
         """A model sampling from the latest weights (refresh after every update)."""
         sampling_client = self.training_client.save_weights_and_get_sampling_client()
@@ -122,9 +126,11 @@ class TinkerTrainer:
         return {"n_datums": len(datums), **metrics}
 
     def save(self, results_dir: str, step: int) -> None:
-        """Save sampler weights."""
+        """Save sampler weights (for evaluation) and full training state (for resume)."""
         sampler = self.training_client.save_weights_for_sampler(name=f"step-{step:05d}")
+        state = self.training_client.save_state(name=f"state-{step:05d}")
         sampler_path = str(sampler.result().path)
+        state_path = str(state.result().path)
         with open(os.path.join(results_dir, "checkpoints.jsonl"), "a", encoding="utf-8") as f:
-            f.write(json.dumps({"step": step, "checkpoint": sampler_path}) + "\n")
-        logging.info("Saved Tinker sampler checkpoint for step %d: %s", step, sampler_path)
+            f.write(json.dumps({"step": step, "checkpoint": sampler_path, "state": state_path}) + "\n")
+        logging.info("Saved Tinker checkpoint for step %d: sampler %s, state %s", step, sampler_path, state_path)

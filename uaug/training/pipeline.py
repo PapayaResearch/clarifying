@@ -6,7 +6,7 @@ import random
 import statistics
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
-from typing import Any, List
+from typing import Any, List, Optional
 
 from tqdm import tqdm
 
@@ -27,6 +27,7 @@ class TrainingPipeline:
     mode: str
     max_questions: int
     importance_weighting: str
+    resume_dir: Optional[str]
     n_iterations: int
     instances_per_iteration: int
     group_size: int
@@ -76,7 +77,20 @@ class TrainingPipeline:
         log_path = os.path.join(results_dir, "training_log.jsonl")
         trajectories_path = os.path.join(results_dir, "trajectories.jsonl")
 
-        for iteration in range(self.n_iterations):
+        start_iteration = 0
+        if self.resume_dir:
+            with open(os.path.join(self.resume_dir, "checkpoints.jsonl"), encoding="utf-8") as f:
+                last = json.loads(f.readlines()[-1])
+            self.trainer.load_state(last["state"])
+            start_iteration = last["step"] + 1
+            logging.info("Resuming from step %d (%s)", last["step"], last["state"])
+            if start_iteration >= self.n_iterations:
+                logging.error("Run already has %d iterations, raise training.n_iterations to continue", start_iteration)
+                return
+        # On resume, replay the sampling schedule so instance batches continue where they left off
+        for _ in range(start_iteration):
+            rng.sample(instances, min(self.instances_per_iteration, len(instances)))
+        for iteration in range(start_iteration, self.n_iterations):
             model = self.trainer.make_model()  # refresh sampler to the latest weights
             batch = rng.sample(instances, min(self.instances_per_iteration, len(instances)))
             trajectories = self._collect_batch(batch, model, iteration, max_workers)

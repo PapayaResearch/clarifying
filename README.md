@@ -101,7 +101,8 @@ python -m uaug.training.run \
 - `training/reward`: `terminal` (reward = u_rec, questions free) | `terminal_costed` (u_rec − c·questions)
 - `training.reward.question_cost`: The per-question cost c (terminal_costed)
 - `training.importance_weighting`: Which weighting the reward optimizes (`llm` | `equal`)
-- `training.n_iterations`: Number of training iterations (one gradient step each)
+- `training.n_iterations`: Total number of training iterations (one gradient step each, a resumed run continues up to this)
+- `training.resume_dir`: Previous training run directory to resume, picks up its last state checkpoint and appends to the same directory
 - `training.instances_per_iteration` / `training.group_size`: Rollout batch shape
 - `training.save_every`: Checkpoint interval (the final iteration always saves)
 - `training.trainer.lora_rank` / `training.trainer.learning_rate`: LoRA update knobs
@@ -119,7 +120,7 @@ results/<task>/<dataset>/training/<model>/<agent>/k_<k>/<reward>/<weighting>/<da
 
 **Trajectories**: every judged rollout's transcript, judgment, reward, and advantage
 
-**Checkpoints**: steps mapped to Tinker sampler paths for the evaluation stage
+**Checkpoints**: steps mapped to Tinker sampler paths (for the evaluation stage) and state paths (for resuming training)
 
 ## 3. Evaluation
 

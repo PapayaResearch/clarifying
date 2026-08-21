@@ -28,10 +28,13 @@ def main(cfg: Config):
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     log_dir = os.path.join(cfg.logging.log_dir, "training")
     log_file = os.path.join(log_dir, current_date + ".log")
-    results_dir = os.path.join(
-        cfg.logging.results_dir, cfg.task.name, cfg.dataset.name, "training", cfg.model.name, cfg.agent.name,
-        f"k_{cfg.general.k}", cfg.training.reward.name, cfg.training.importance_weighting, current_date
-    )
+    if cfg.training.resume_dir:
+        results_dir = cfg.training.resume_dir
+    else:
+        results_dir = os.path.join(
+            cfg.logging.results_dir, cfg.task.name, cfg.dataset.name, "training", cfg.model.name, cfg.agent.name,
+            f"k_{cfg.general.k}", cfg.training.reward.name, cfg.training.importance_weighting, current_date
+        )
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(results_dir, exist_ok=True)
 
