@@ -2,5 +2,5 @@
 _target_: uaug.training.rewards.ConstantPenaltyReward
 # Display name
 name: constant_penalty
-# Reward deducted per question asked
+# Flat cost per question asked (reward = u_rec - question_cost * n)
 question_cost: 0.05
