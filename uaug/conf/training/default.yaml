@@ -1,6 +1,6 @@
 # Swappable config groups
 defaults:
-  - reward: terminal_costed
+  - reward: terminal
   - trainer: tinker
   - _self_
 

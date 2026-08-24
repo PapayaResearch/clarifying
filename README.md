@@ -98,9 +98,8 @@ python -m uaug.training.run \
 
 ### Options
 - `agent`: The agent to train as (`asker_fixed` | `asker_dynamic`)
-- `training/reward`: `terminal` (reward = u_rec, questions free) | `terminal_costed` (u_rec − c·questions)
-- `training.reward.question_cost`: The per-question cost c (terminal_costed)
-- `training.importance_weighting`: Which weighting the reward optimizes (`llm` | `equal`)
+- `training/reward`: `terminal` (reward = u_rec, questions free) | `constant_penalty` (u_rec − c·n) | `exponential_penalty` (u_rec − c·(g^n − 1)/(g − 1), question t costs c·g^t) | `discounted_penalty` (γ^n · u_rec)
+- `training.importance_weighting`: Which weighting the reward optimizes (`llm` | `equal`, default `equal`)
 - `training.n_iterations`: Total number of training iterations (one gradient step each, a resumed run continues up to this)
 - `training.resume_dir`: Previous training run directory to resume, picks up its last state checkpoint and appends to the same directory
 - `training.instances_per_iteration` / `training.group_size`: Rollout batch shape
@@ -124,7 +123,7 @@ results/<task>/<dataset>/training/<model>/<agent>/k_<k>/<reward>/<weighting>/<da
 
 ## 3. Evaluation
 
-Run one agent over instances and judge every episode: the agent sees only the eroded request, asks questions per its mode, and commits a final description. The judge checks each redacted detail against the final output, aggregated into the recovery metric `u_rec` under both weightings (`llm` importance-weighted and `equal` unweighted). `model.checkpoint=null` evaluates the base weights, and a training-stage checkpoint evaluates the fine-tuned model through the identical code path.
+Run one agent over instances and judge every episode: the agent sees only the eroded request, asks questions per its mode, and commits a final description. The judge checks each redacted detail against the final output, aggregated into the recovery metric `u_rec` under both weightings (`llm` importance-weighted and `equal` unweighted). The summary also reports `clairvoyant`, the best possible u_rec at each episode's question count (the top-n redacted weights in descending order), so u_rec can be read against the optimum for the questions actually asked. `model.checkpoint=null` evaluates the base weights, and a training-stage checkpoint evaluates the fine-tuned model through the identical code path.
 
 ### Run
 ```bash

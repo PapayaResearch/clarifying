@@ -1,0 +1,6 @@
+# Hydra target class
+_target_: uaug.training.rewards.DiscountedPenaltyReward
+# Display name
+name: discounted_penalty
+# Multiplicative discount per question (reward = gamma^n * u_rec)
+gamma: 0.93

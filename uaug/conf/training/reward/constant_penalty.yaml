@@ -1,0 +1,6 @@
+# Hydra target class
+_target_: uaug.training.rewards.ConstantPenaltyReward
+# Display name
+name: constant_penalty
+# Reward deducted per question asked
+question_cost: 0.05

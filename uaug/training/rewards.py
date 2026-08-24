@@ -31,14 +31,40 @@ class TerminalReward(RewardFn):
 
 
 @dataclasses.dataclass
-class TerminalCostedReward(RewardFn):
-    """Recovery minus question cost: reward = u_rec - c * n_questions."""
+class ConstantPenaltyReward(RewardFn):
+    """Recovery minus a flat question cost: reward = u_rec - c * n_questions."""
 
     question_cost: float
-    name: str = "terminal_costed"
+    name: str = "constant_penalty"
 
     def step_reward(self, episode: Episode, t: int) -> float:
         return -self.question_cost
 
     def final_reward(self, episode: Episode, judgment: JudgeResult, weighting: str) -> float:
         return judgment.u_rec[weighting]
+
+
+@dataclasses.dataclass
+class ExponentialPenaltyReward(RewardFn):
+    """Escalating additive cost: question t costs c * g^t, so reward = u_rec - c * (g^n - 1) / (g - 1)."""
+
+    question_cost: float
+    growth: float
+    name: str = "exponential_penalty"
+
+    def step_reward(self, episode: Episode, t: int) -> float:
+        return -self.question_cost * self.growth ** t
+
+    def final_reward(self, episode: Episode, judgment: JudgeResult, weighting: str) -> float:
+        return judgment.u_rec[weighting]
+
+
+@dataclasses.dataclass
+class DiscountedPenaltyReward(RewardFn):
+    """Multiplicative discount per question: reward = gamma^n * u_rec."""
+
+    gamma: float
+    name: str = "discounted_penalty"
+
+    def final_reward(self, episode: Episode, judgment: JudgeResult, weighting: str) -> float:
+        return self.gamma ** episode.n_questions * judgment.u_rec[weighting]
