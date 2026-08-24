@@ -7,12 +7,15 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from uaug.utils.schema import Episode, JudgeResult
+from uaug.utils.misc import clairvoyant_u_rec
+from uaug.utils.schema import Episode, JudgeResult, TaskInstance
 
 
-def write_plots(results_dir: str, episodes: List[Episode], judgments: List[JudgeResult]) -> None:
+def write_plots(results_dir: str, episodes: List[Episode], judgments: List[JudgeResult],
+                instances: List[TaskInstance] = None) -> None:
     if not judgments:
         return
+    instance_by_id = {i.instance_id: i for i in instances}
 
     for weighting in ("llm", "equal"):
         # Distribution of per-episode recovery, with the mean marked
@@ -37,6 +40,16 @@ def write_plots(results_dir: str, episodes: List[Episode], judgments: List[Judge
         ax.bar([str(n) for n in counts], means)
         for i, n in enumerate(counts):
             ax.annotate(f"n={len(by_questions[n])}", (i, means[i]), ha="center", va="bottom", fontsize=8)
+        # Optimal recovery at each question count: the clairvoyant ceiling per bucket
+        clair = {}
+        for episode in episodes:
+            importances = [d.importance for d in instance_by_id[episode.instance_id].redacted]
+            clair.setdefault(episode.n_questions, []).append(
+                clairvoyant_u_rec(importances, episode.n_questions, weighting))
+        ax.plot(range(len(counts)), [statistics.mean(clair[n]) for n in counts], linestyle="none",
+                marker="_", markersize=22, markeredgewidth=2, color="#3c4043",
+                label="clairvoyant (optimal at count)")
+        ax.legend(fontsize=8, frameon=False)
         ax.set_xlabel("questions asked")
         ax.set_ylabel(f"mean u_rec ({weighting})")
         ax.set_ylim(0, 1)

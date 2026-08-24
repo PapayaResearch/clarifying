@@ -17,6 +17,8 @@ import textwrap
 import matplotlib
 import yaml
 
+from uaug.utils.misc import clairvoyant_u_rec
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch
@@ -174,6 +176,12 @@ def visualize(instance, episode, judgment, out_path):
         f"U_rec (Equal) = {judgment['u_rec']['equal']:.3f}",
         f"Details Delivered = {n_delivered}/{len(instance['redacted_ids'])}",
         f"Questions Asked = {episode['n_questions']}",
+    ])
+    redacted_importances = [details[i]["importance"] for i in instance["redacted_ids"]]
+    page.space(1.0)
+    page.metric_row([
+        f"Clairvoyant (LLM) = {clairvoyant_u_rec(redacted_importances, episode['n_questions'], 'llm'):.3f}",
+        f"Clairvoyant (Equal) = {clairvoyant_u_rec(redacted_importances, episode['n_questions'], 'equal'):.3f}",
     ])
 
     page.render(out_path, f"Agent: {episode['agent_name']} ({instance['instance_id']})")
