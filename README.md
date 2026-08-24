@@ -2,15 +2,15 @@
 
 ## Overview
 
-**The User-Agent Utility Gap**: measuring, and training agents to close, the gap between what users want and what agents deliver. Hyper-detailed image descriptions are systematically redacted. An agent recovers the missing details by asking a simulated user clarifying questions, is scored per detail by a rubric judge, and is RL-trained to ask better.
+**The User-Agent Utility Gap**: measuring, and training agents to close, the gap between what users want and what agents deliver. Hyper-detailed image descriptions are redacted, an agent recovers the missing details by asking a simulated user clarifying questions, a rubric judge scores each detail, and RL trains the agent to ask better.
 
-The pipeline consists of the following stages, chained only by result paths:
+The pipeline consists of the following stages:
 
-1. **Synthesis**: Turn full descriptions into redacted task instances (decompose → redact → erode)
+1. **Synthesis**: Turn full descriptions into redacted task instances
 2. **Training**: RL fine-tune the asking policy with LoRA via the Tinker API
 3. **Evaluation**: Run agents against the simulated user and judge per-detail recovery
 
-The `llm` config group is the frozen environment for synthesis, the user simulator, and the judge (default `gemini-3.5-flash-lite`). The `model` config group is the model under test that holds the conversation for every agent (default `qwen3-8b`, sampled via Tinker). The `task` config group holds the detail category vocabulary and every task-specific prompt.
+The `llm` config group is the frozen environment (synthesis, user simulator, judge, default `gemini-3.5-flash-lite`), the `model` group is the model under test that holds the conversation (default `qwen3-8b`, sampled via Tinker), and the `task` group holds the detail categories and prompts.
 
 ## Installation
 
@@ -28,7 +28,7 @@ conda create -n uaug python=3.12
 conda activate uaug
 ```
 
-install the dependencies (the `train` extra is required since every agent samples through Tinker):
+install the dependencies:
 
 ```bash
 pip install -e ".[train]"
@@ -57,8 +57,7 @@ python scripts/setup_docci.py --limit 500
 > All commands run from the repo root. `results/` and `logs/` are created there.
 
 ## 1. Synthesis
-
-Decompose each source description into atomic details (category, importance weight, yes/no check), redact `k` of them (importance-weighted, preferring distinct categories), and erode the rest into a natural user request.
+Decompose each description into atomic details, redact `k` of them (importance-weighted, preferring distinct categories), and erode the rest into a natural user request.
 
 ### Run
 ```bash
@@ -66,11 +65,11 @@ python -m uaug.synthesis.run
 ```
 
 ### Options
-- `general.k`: Details redacted per instance (question counts and `min_details` derive from it)
+- `general.k`: Details redacted per instance
 - `synthesis.num_sources`: Number of sources to process (`null` for all)
-- `synthesis.min_details`: Drop sources whose decomposition yields fewer details
+- `synthesis.min_details`: Drop sources whose decomposition yields fewer details (default `k + 5`)
 - `synthesis.resume` / `synthesis.resume_path`: Resume a previous synthesis run
-- `llm`: Environment LLM used for decompose/erode
+- `llm`: Environment LLM used to decompose and erode
 
 ### Outputs
 ```
@@ -85,8 +84,7 @@ results/<task>/<dataset>/synthesis/<llm>/k_<k>/<datetime>/
 **Synthesis report**: yields, drop reasons, and category counts
 
 ## 2. Training
-
-Per iteration: sample instances, collect grouped rollouts (GRPO-style group-mean-centered advantages), judge them, and take one importance-sampling policy-gradient step on Tinker-managed LoRA weights. Rollouts mirror the selected agent's mode, question count, and prompts, so a checkpoint is evaluated as exactly the agent it was trained as.
+Per iteration: sample instances, collect grouped rollouts (GRPO-style group-mean-centered advantages), judge them, and take one policy-gradient step on Tinker-managed LoRA weights. Rollouts mirror the selected agent, so a checkpoint is evaluated as exactly the agent it was trained as.
 
 ### Run
 ```bash
@@ -98,12 +96,12 @@ python -m uaug.training.run \
 
 ### Options
 - `agent`: The agent to train as (`asker_fixed` | `asker_dynamic`)
-- `training/reward`: `terminal` (reward = u_rec, questions free) | `constant_penalty` (u_rec − c·n) | `exponential_penalty` (u_rec − c·(g^n − 1)/(g − 1), question t costs c·g^t) | `discounted_penalty` (γ^n · u_rec)
-- `training.importance_weighting`: Which weighting the reward optimizes (`llm` | `equal`, default `equal`)
-- `training.n_iterations`: Total number of training iterations (one gradient step each, a resumed run continues up to this)
-- `training.resume_dir`: Previous training run directory to resume, picks up its last state checkpoint and appends to the same directory
+- `training/reward`: `terminal` (u_rec, questions free) | `constant_penalty` (u_rec − c·n) | `exponential_penalty` (question t costs c·g^t) | `discounted_penalty` (γ^n · u_rec)
+- `training.importance_weighting`: Which weighting the reward optimizes (`llm` | `equal`)
+- `training.n_iterations`: Total number of iterations, one gradient step each
 - `training.instances_per_iteration` / `training.group_size`: Rollout batch shape
-- `training.save_every`: Checkpoint interval (the final iteration always saves)
+- `training.save_every`: Checkpoint interval
+- `training.resume_dir`: Previous run directory to continue from its last checkpoint
 - `training.trainer.lora_rank` / `training.trainer.learning_rate`: LoRA update knobs
 
 ### Outputs
@@ -119,11 +117,10 @@ results/<task>/<dataset>/training/<model>/<agent>/k_<k>/<reward>/<weighting>/<da
 
 **Trajectories**: every judged rollout's transcript, judgment, reward, and advantage
 
-**Checkpoints**: steps mapped to Tinker sampler paths (for the evaluation stage) and state paths (for resuming training)
+**Checkpoints**: steps mapped to Tinker sampler paths (for evaluation) and state paths (for resuming)
 
 ## 3. Evaluation
-
-Run one agent over instances and judge every episode: the agent sees only the eroded request, asks questions per its mode, and commits a final description. The judge checks each redacted detail against the final output, aggregated into the recovery metric `u_rec` under both weightings (`llm` importance-weighted and `equal` unweighted). The summary also reports `clairvoyant`, the best possible u_rec at each episode's question count (the top-n redacted weights in descending order), so u_rec can be read against the optimum for the questions actually asked. `model.checkpoint=null` evaluates the base weights, and a training-stage checkpoint evaluates the fine-tuned model through the identical code path.
+Run one agent over instances and judge every episode: the agent sees only the eroded request, asks questions per its mode, and commits a final description. The judge checks each redacted detail against it, giving the recovery metric `u_rec` under both weightings plus `clairvoyant`, the best possible u_rec at each episode's question count.
 
 ### Run
 ```bash
@@ -133,12 +130,10 @@ python -m uaug.evaluation.run \
 ```
 
 ### Options
-- `agent`: `zeroq` (no questions, the inferability floor) | `asker_fixed` (exactly k questions) | `asker_dynamic` (model decides when to stop)
-- `general.k`: Match the instances' k (fixed-mode count = k, dynamic cap = 2k)
-- `agent.max_questions`: Explicit override of the derived question count/cap
+- `agent`: `zeroq` (no questions, the inferability floor) | `asker_fixed` (exactly k questions) | `asker_dynamic` (model decides when to stop, cap 2k)
+- `general.k`: Match the instances' k
 - `evaluation.split`: `val` | `test`
-- `model.checkpoint`: Tinker sampler path from the training stage (`null` = base weights)
-- `model.thinking`: Whether the model thinks before answering (default `false`)
+- `model.checkpoint`: Tinker sampler path from the training stage (`null` for base weights)
 - `general.max_workers`: Parallelization level
 
 ### Outputs
@@ -152,6 +147,6 @@ results/<task>/<dataset>/evaluation/<model>/<agent>/k_<k>/<base|checkpoint>/<dat
 └── config.yaml
 ```
 
-**Summary CSV**: one row per run (agent, mode, split, u_rec means under both weightings, mean questions), with rows concatenated across runs forming the comparison table
+**Summary CSV**: one row per run (agent, mode, split, u_rec and clairvoyant means under both weightings, mean questions)
 
-**Instance visuals**: `python scripts/visualize_eval.py <eval_dir> -n <n>` renders n random episodes from an evaluation run as one image each (ground-truth intent, redacted details with judge verdicts, the interaction as a chat, final output, metrics) into `<eval_dir>/figures/`
+**Instance visuals**: `python scripts/visualize_eval.py <eval_dir> -n <n>` renders n random episodes as one image each into `<eval_dir>/figures/`
