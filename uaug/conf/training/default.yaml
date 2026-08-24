@@ -18,16 +18,16 @@ mode: ${agent.mode}
 # Maximum number of questions the agent can ask
 max_questions: ${agent.max_questions}
 # Which weighting the reward optimizes ("llm" or "equal")
-importance_weighting: llm
+importance_weighting: equal
 
 # Number of training iterations
-n_iterations: 50
+n_iterations: 200
 # Instances sampled per iteration
-instances_per_iteration: 16
+instances_per_iteration: 4
 # Rollouts per instance (GRPO-style group)
-group_size: 16
+group_size: 32
 # Save a checkpoint every N iterations
-save_every: 10
+save_every: 5
 
 # Prompts (same as evaluation prompts)
 ask_prompt: ${agent.ask_prompt}
