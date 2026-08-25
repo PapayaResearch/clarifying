@@ -24,6 +24,9 @@ def main(cfg: Config):
     cfg_yaml = OmegaConf.to_yaml(cfg)
     print_config(cfg)
 
+    # Build the pipeline
+    pipeline = hydra.utils.instantiate(cfg.synthesis)
+
     # Set up logging
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     log_dir = os.path.join(cfg.logging.log_dir, "synthesis")
@@ -35,7 +38,7 @@ def main(cfg: Config):
     else:
         llm_name = cfg.llm.model.split("/")[-1]
         results_dir = os.path.join(
-            cfg.logging.results_dir, cfg.task.name, cfg.dataset.name, "synthesis", llm_name, f"k_{cfg.synthesis.k}", current_date
+            cfg.logging.results_dir, cfg.task.name, cfg.dataset.name, "synthesis", llm_name, pipeline.label, current_date
         )
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(results_dir, exist_ok=True)
@@ -55,7 +58,6 @@ def main(cfg: Config):
     logging.info("Logging to: %s", log_file)
 
     # Run synthesis pipeline
-    pipeline = hydra.utils.instantiate(cfg.synthesis)
     pipeline.run(results_dir=results_dir, max_workers=cfg.general.max_workers)
 
     # Save config near outputs and logs

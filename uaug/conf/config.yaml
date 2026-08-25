@@ -4,7 +4,6 @@
 
 defaults:
   - _self_
-  - synthesis: default
   - training: default
   - evaluation: default
   # Orchestration LLM (e.g., gemini-3.5-flash-lite, gemini-3.7-flash)
@@ -15,6 +14,8 @@ defaults:
   - dataset: docci
   # Task to test (e.g., image-gen)
   - task: image-gen
+  # Redaction scheme (e.g., fixed-k, dynamic-k)
+  - synthesis: fixed-k
   # Evaluation agent (e.g., zeroq, asker_fixed, asker_dynamic)
   - agent: asker_fixed
 

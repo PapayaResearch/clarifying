@@ -124,7 +124,6 @@ class Synthesis:
     sources_path: str
     num_sources: Optional[int]
     task: str
-    k: int
     min_details: int
     split_fractions: Dict[str, float]
     random_seed: int
