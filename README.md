@@ -57,23 +57,24 @@ python scripts/setup_docci.py --limit 500
 > All commands run from the repo root. `results/` and `logs/` are created there.
 
 ## 1. Synthesis
-Decompose each description into atomic details, redact `k` of them (importance-weighted, preferring distinct categories), and erode the rest into a natural user request.
+Decompose each description into atomic details, redact some of them (importance-weighted, preferring distinct categories), and erode the rest into a natural user request. The redaction scheme sets how many: `fixed-k` redacts exactly `k` per instance, `dynamic-k` draws a count per instance uniformly from 1 to a maximum.
 
 ### Run
 ```bash
-python -m uaug.synthesis.run
+python -m uaug.synthesis.run synthesis=<fixed-k|dynamic-k>
 ```
 
 ### Options
-- `general.k`: Details redacted per instance
+- `synthesis`: Redaction scheme (`fixed-k` | `dynamic-k`)
+- `general.k`: Details redacted per instance (`fixed-k`), or the upper end of the per-instance count (`dynamic-k`)
+- `synthesis.min_details`: Drop sources whose decomposition yields fewer details
 - `synthesis.num_sources`: Number of sources to process (`null` for all)
-- `synthesis.min_details`: Drop sources whose decomposition yields fewer details (default `k + 5`)
 - `synthesis.resume` / `synthesis.resume_path`: Resume a previous synthesis run
 - `llm`: Environment LLM used to decompose and erode
 
 ### Outputs
 ```
-results/<task>/<dataset>/synthesis/<llm>/k_<k>/<datetime>/
+results/<task>/<dataset>/synthesis/<llm>/<k_<k>|k_dyn<max>>/<datetime>/
 ├── instances.train.jsonl
 ├── instances.val.jsonl
 ├── instances.test.jsonl
@@ -81,7 +82,7 @@ results/<task>/<dataset>/synthesis/<llm>/k_<k>/<datetime>/
 └── config.yaml
 ```
 
-**Synthesis report**: yields, drop reasons, and category counts
+**Synthesis report**: yields, drop reasons, category counts, and the distribution of redacted counts
 
 ## 2. Training
 Per iteration: sample instances, collect grouped rollouts (GRPO-style group-mean-centered advantages), judge them, and take one policy-gradient step on Tinker-managed LoRA weights. Rollouts mirror the selected agent, so a checkpoint is evaluated as exactly the agent it was trained as.
