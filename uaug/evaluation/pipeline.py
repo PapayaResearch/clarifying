@@ -11,7 +11,7 @@ from typing import List, Tuple
 from tqdm import tqdm
 
 from uaug.utils.judge import RubricJudge
-from uaug.utils.misc import read_jsonl, write_jsonl
+from uaug.utils.misc import clairvoyant_u_rec, read_jsonl, write_jsonl
 from uaug.utils.schema import Episode, JudgeResult, TaskInstance, Turn
 from uaug.evaluation.agents import Asker
 from uaug.evaluation.plots import write_plots
@@ -71,6 +71,10 @@ class EvaluationPipeline:
         write_jsonl(os.path.join(results_dir, "judgments.jsonl"), judgments)
 
         k_by_instance = {i.instance_id: len(i.redacted_ids) for i in instances}
+        instance_by_id = {i.instance_id: i for i in instances}
+
+        def clairvoyant(instance: TaskInstance, n_questions: int, weighting: str) -> float:
+            return clairvoyant_u_rec([d.importance for d in instance.redacted], n_questions, weighting)
 
         summary = {
             "agent": self.agent.name,
@@ -79,6 +83,12 @@ class EvaluationPipeline:
             "n_episodes": len(episodes),
             **{
                 f"u_rec_{weighting}_mean": round(statistics.mean(j.u_rec[weighting] for j in judgments), 3) if judgments else None
+                for weighting in ("llm", "equal")
+            },
+            **{
+                f"clairvoyant_{weighting}_mean": round(statistics.mean(
+                    clairvoyant(instance_by_id[e.instance_id], e.n_questions, weighting) for e in episodes
+                ), 3) if episodes else None
                 for weighting in ("llm", "equal")
             },
             "n_questions_mean": round(statistics.mean(e.n_questions for e in episodes), 2) if episodes else None,
@@ -91,4 +101,4 @@ class EvaluationPipeline:
         logging.info("Evaluation summary: %s", json.dumps(summary))
         print(json.dumps(summary, indent=2))
 
-        write_plots(results_dir, episodes, judgments)
+        write_plots(results_dir, episodes, judgments, instances)

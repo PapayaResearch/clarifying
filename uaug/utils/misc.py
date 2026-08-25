@@ -50,3 +50,9 @@ def write_jsonl(path: str | Path, rows: Iterable[Any]):
             if dataclasses.is_dataclass(row):
                 row = dataclasses.asdict(row)
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
+def clairvoyant_u_rec(importances: Iterable[float], n_questions: int, weighting: str) -> float:
+    """Best possible u_rec at a question count: recover the n highest-weighted redacted details."""
+    weights = sorted((max(imp, 0.05) if weighting == "llm" else 1.0 for imp in importances), reverse=True)
+    return sum(weights[:n_questions]) / sum(weights)

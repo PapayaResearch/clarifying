@@ -1,6 +1,6 @@
 # Swappable config groups
 defaults:
-  - reward: terminal_costed
+  - reward: terminal
   - trainer: tinker
   - _self_
 
@@ -21,7 +21,7 @@ max_questions: ${agent.max_questions}
 importance_weighting: equal
 
 # Number of training iterations
-n_iterations: 200
+n_iterations: 250
 # Instances sampled per iteration
 instances_per_iteration: 4
 # Rollouts per instance (GRPO-style group)
