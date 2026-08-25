@@ -16,8 +16,8 @@ defaults:
   - task: image-gen
   # Redaction scheme (e.g., fixed-k, dynamic-k)
   - synthesis: fixed-k
-  # Evaluation agent (e.g., zeroq, asker_fixed, asker_dynamic)
-  - agent: asker_fixed
+  # Evaluation agent (e.g., no-asking, fixed-asking, open-asking)
+  - agent: fixed-asking
 
 ##############################
 # General Settings

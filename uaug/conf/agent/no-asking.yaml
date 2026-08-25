@@ -1,11 +1,11 @@
 # Hydra target class
 _target_: uaug.utils.agents.Asker
 # Agent name recorded in results
-name: asker_dynamic
-# Dynamic mode: before each question the model decides whether to ask one more
-mode: dynamic
-# Maximum number of questions the agent can ask (default: 2k)
-max_questions: ${mul:${general.k},2}
+name: no-asking
+# No questions: straight to the final output
+mode: fixed
+# Maximum number of questions the agent can ask
+max_questions: 0
 # The conversation model
 model: ${model}
 # Prompts shared by every agent

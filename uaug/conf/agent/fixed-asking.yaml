@@ -1,11 +1,11 @@
 # Hydra target class
 _target_: uaug.utils.agents.Asker
 # Agent name recorded in results
-name: zeroq
-# No questions: straight to the final output
+name: fixed-asking
+# Fixed mode: the model asks exactly max_questions questions
 mode: fixed
-# Maximum number of questions the agent can ask
-max_questions: 0
+# Maximum number of questions the agent can ask (default: k)
+max_questions: ${general.k}
 # The conversation model
 model: ${model}
 # Prompts shared by every agent
