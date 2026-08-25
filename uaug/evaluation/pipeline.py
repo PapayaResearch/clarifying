@@ -13,9 +13,9 @@ from tqdm import tqdm
 from uaug.utils.judge import RubricJudge
 from uaug.utils.misc import clairvoyant_u_rec, read_jsonl, write_jsonl
 from uaug.utils.schema import Episode, JudgeResult, TaskInstance, Turn
-from uaug.evaluation.agents import Asker
+from uaug.utils.agents import Asker
+from uaug.utils.user import UserSimulator
 from uaug.evaluation.plots import write_plots
-from uaug.evaluation.user import UserSimulator
 
 
 @dataclasses.dataclass

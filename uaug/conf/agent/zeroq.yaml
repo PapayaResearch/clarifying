@@ -1,5 +1,5 @@
 # Hydra target class
-_target_: uaug.evaluation.agents.Asker
+_target_: uaug.utils.agents.Asker
 # Agent name recorded in results
 name: zeroq
 # No questions: straight to the final output

@@ -3,10 +3,10 @@ from typing import Dict, List
 
 from uaug.utils.judge import RubricJudge
 from uaug.utils.schema import AgentTurn, Completion, Episode, TaskInstance, Trajectory, Turn
-from uaug.evaluation.agents import build_chat_messages, build_transcript_messages, parse_decision
-from uaug.evaluation.user import UserSimulator
+from uaug.utils.agents import build_chat_messages, build_transcript_messages, parse_decision
+from uaug.utils.tinker import TinkerModel
+from uaug.utils.user import UserSimulator
 from uaug.training.rewards import RewardFn, total_reward
-from uaug.training.tinker import TinkerModel
 
 
 def collect_trajectory(

@@ -10,7 +10,7 @@ import litellm
 from pydantic import BaseModel
 
 from uaug.utils.schema import Completion
-from uaug.training.tinker import TinkerModel, load_model
+from uaug.utils.tinker import TinkerModel, load_model
 
 # Suppress litellm info messages
 litellm.suppress_debug_info = True

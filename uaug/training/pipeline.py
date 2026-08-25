@@ -13,7 +13,7 @@ from tqdm import tqdm
 from uaug.utils.judge import RubricJudge
 from uaug.utils.misc import read_jsonl
 from uaug.utils.schema import TaskInstance, Trajectory
-from uaug.evaluation.user import UserSimulator
+from uaug.utils.user import UserSimulator
 from uaug.training.rollouts import assign_group_advantages, collect_trajectory
 from uaug.training.tinker import TinkerTrainer
 

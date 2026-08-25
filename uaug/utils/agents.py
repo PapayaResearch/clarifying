@@ -3,7 +3,7 @@ from typing import Callable, Dict, List, Tuple
 
 from uaug.utils.schema import Turn
 from uaug.utils.wrappers import ChatModel
-from uaug.evaluation.user import format_conversation
+from uaug.utils.user import format_conversation
 
 
 def build_transcript_messages(system_prompt: str, request: str, turns: List[Turn]) -> List[Dict[str, str]]:
