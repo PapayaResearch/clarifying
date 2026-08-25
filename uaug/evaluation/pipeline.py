@@ -38,6 +38,7 @@ class EvaluationPipeline:
         turns, final_output, n_questions = self.agent.run(
             request=instance.eroded_prompt,
             answer=lambda question, turns: self.user.answer(instance, question, turns),
+            n_redacted=len(instance.redacted_ids),
         )
         episode = Episode(
             instance_id=instance.instance_id,

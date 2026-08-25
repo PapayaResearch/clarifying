@@ -2,10 +2,10 @@
 _target_: uaug.utils.agents.Asker
 # Agent name recorded in results
 name: open-asking
-# Dynamic mode: before each question the model decides whether to ask one more
+# Dynamic mode: before each question the model decides whether to ask one more, up to the cap
 mode: dynamic
-# Maximum number of questions the agent can ask (default: 2k)
-max_questions: ${mul:${general.k},2}
+# Question cap per episode, as a multiple of the instance's redacted count
+k_multiplier: 2
 # The conversation model
 model: ${model}
 # Prompts shared by every agent

@@ -97,6 +97,7 @@ python -m uaug.training.run \
 
 ### Options
 - `agent`: The agent to train as (`fixed-asking` | `open-asking`)
+- `agent.k_multiplier`: Question cap per episode as a multiple of the instance's redacted count
 - `training/reward`: `terminal` (u_rec, questions free) | `constant_penalty` (u_rec − c·n) | `exponential_penalty` (question t costs c·g^t) | `discounted_penalty` (γ^n · u_rec)
 - `training.importance_weighting`: Which weighting the reward optimizes (`llm` | `equal`)
 - `training.n_iterations`: Total number of iterations, one gradient step each
@@ -131,7 +132,8 @@ python -m uaug.evaluation.run \
 ```
 
 ### Options
-- `agent`: `no-asking` (no questions, the inferability floor) | `fixed-asking` (exactly k questions) | `open-asking` (model decides when to stop)
+- `agent`: `no-asking` (no questions, the inferability floor) | `fixed-asking` (exactly as many questions as the instance has redacted details) | `open-asking` (model decides when to stop, capped at twice that count)
+- `agent.k_multiplier`: Question cap per episode as a multiple of the instance's redacted count (0, 1 and 2 for the three agents)
 - `general.k`: Match the instances' k
 - `evaluation.split`: `val` | `test`
 - `model.checkpoint`: Tinker sampler path from the training stage (`null` for base weights)

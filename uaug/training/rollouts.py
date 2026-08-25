@@ -16,7 +16,7 @@ def collect_trajectory(
     judge: RubricJudge,
     reward_fn: RewardFn,
     mode: str,
-    max_questions: int,
+    k_multiplier: int,
     importance_weighting: str,
     ask_prompt: str,
     final_prompt: str,
@@ -27,6 +27,7 @@ def collect_trajectory(
     if importance_weighting not in ("llm", "equal"):
         raise ValueError(f"Unknown importance weighting: {importance_weighting!r} (expected 'llm' or 'equal')")
 
+    max_questions = k_multiplier * len(instance.redacted_ids)
     turns: List[Turn] = []
     agent_turns: List[AgentTurn] = []
     request = instance.eroded_prompt

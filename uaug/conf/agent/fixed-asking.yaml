@@ -2,10 +2,10 @@
 _target_: uaug.utils.agents.Asker
 # Agent name recorded in results
 name: fixed-asking
-# Fixed mode: the model asks exactly max_questions questions
+# Fixed mode: the model asks exactly as many questions as the cap
 mode: fixed
-# Maximum number of questions the agent can ask (default: k)
-max_questions: ${general.k}
+# Question cap per episode, as a multiple of the instance's redacted count
+k_multiplier: 1
 # The conversation model
 model: ${model}
 # Prompts shared by every agent

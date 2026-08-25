@@ -15,8 +15,8 @@ resume_dir: null
 split: train
 # Fixed or dynamic mode
 mode: ${agent.mode}
-# Maximum number of questions the agent can ask
-max_questions: ${agent.max_questions}
+# Question cap per episode, as a multiple of the instance's redacted count
+k_multiplier: ${agent.k_multiplier}
 # Which weighting the reward optimizes ("llm" or "equal")
 importance_weighting: equal
 
