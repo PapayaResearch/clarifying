@@ -57,16 +57,16 @@ python scripts/setup_docci.py --limit 500
 > All commands run from the repo root. `results/` and `logs/` are created there.
 
 ## 1. Synthesis
-Decompose each description into atomic details, redact some of them (importance-weighted, preferring distinct categories), and erode the rest into a natural user request. The redaction scheme sets how many: `fixed-k` redacts exactly `k` per instance, `dynamic-k` draws a count per instance uniformly from 1 to a maximum.
+Decompose each description into atomic details, redact some of them (importance-weighted, preferring distinct categories), and erode the rest into a natural user request. The redaction scheme sets how many: `fixed-redactions` redacts exactly `k` per instance, `dynamic-redactions` draws a count per instance uniformly from 1 to a maximum.
 
 ### Run
 ```bash
-python -m uaug.synthesis.run synthesis=<fixed-k|dynamic-k>
+python -m uaug.synthesis.run synthesis=<fixed-redactions|dynamic-redactions>
 ```
 
 ### Options
-- `synthesis`: Redaction scheme (`fixed-k` | `dynamic-k`)
-- `general.k`: Details redacted per instance (`fixed-k`), or the upper end of the per-instance count (`dynamic-k`)
+- `synthesis`: Redaction scheme (`fixed-redactions` | `dynamic-redactions`)
+- `general.k`: Details redacted per instance (`fixed-redactions`), or the upper end of the per-instance count (`dynamic-redactions`)
 - `synthesis.min_details`: Drop sources whose decomposition yields fewer details
 - `synthesis.num_sources`: Number of sources to process (`null` for all)
 - `synthesis.resume` / `synthesis.resume_path`: Resume a previous synthesis run

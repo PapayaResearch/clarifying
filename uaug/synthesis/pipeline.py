@@ -172,7 +172,7 @@ class SynthesisPipeline(abc.ABC):
 
 
 @dataclasses.dataclass
-class FixedKSynthesis(SynthesisPipeline):
+class FixedRedactionsSynthesis(SynthesisPipeline):
     """Every instance redacts exactly k details."""
 
     k: int
@@ -186,7 +186,7 @@ class FixedKSynthesis(SynthesisPipeline):
 
 
 @dataclasses.dataclass
-class DynamicKSynthesis(SynthesisPipeline):
+class DynamicRedactionsSynthesis(SynthesisPipeline):
     """Each instance redacts a count drawn uniformly from 1 to max_redacted_details."""
 
     max_redacted_details: int
