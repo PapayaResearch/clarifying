@@ -1,12 +1,12 @@
 ﻿"""Render paper-ready per-instance visuals for an evaluation run.
 
 Usage:
-    python scripts/visualize_eval.py <eval_dir> -n 5 [--seed 42]
+    python scripts/visualize_eval.py <eval_dir> -n 5 [--seed 42] [--importance llm|equal]
 
 Each figure shows the full pipeline for one instance: the original caption,
 the redacted details (colored by whether the final output delivered them),
-the interaction as a chat, and the episode metrics. Output goes to
-<eval_dir>/figures/<instance_id>.png.
+the interaction as a chat, and the episode metrics under the chosen weighting.
+Output goes to <eval_dir>/figures/<importance>/<instance_id>.png.
 """
 import argparse
 import json
@@ -21,7 +21,7 @@ from uaug.utils.misc import clairvoyant_u_rec
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyBboxPatch
+from matplotlib.patches import FancyBboxPatch, Rectangle
 
 INK, MUTED, LINE = "#3c4043", "#80868b", "#dadce0"
 CAPTION_BG, USER_BG, AGENT_BG = "#f8f9fa", "#f1f3f4", "#e8f0fe"
@@ -29,6 +29,7 @@ DELIVERED, MISSED = "#188038", "#c5221f"
 PAGE_W = 100.0
 LH = 2.6
 PAD = 2.0
+MODE_TITLES = {"no-asking": "No-Asking Mode", "fixed-asking": "Fixed-Asking Mode", "open-asking": "Open-Asking Mode"}
 
 
 def wrap(text, chars):
@@ -61,20 +62,22 @@ class Page:
         self.y += h
         return h
 
-    def metric_row(self, texts):
-        x = 3.0
+    def metric_row(self, texts, gap=1.5):
+        """One box per metric, the row as a whole centered on the page."""
         h = LH + 2 * PAD
-        for text in texts:
-            w = len(text) * 0.86 + 2 * PAD
+        widths = [len(text) * 0.78 + 2 * PAD for text in texts]
+        x = (PAGE_W - sum(widths) - gap * (len(texts) - 1)) / 2
+        for text, w in zip(texts, widths):
             self.items.append(("box", x, self.y, w, h, [text], CAPTION_BG, LINE, None, None, "right", None, None))
-            x += w + 2.0
+            x += w + gap
         self.y += h
 
     def arrow(self, note=""):
         self.items.append(("arrow", 50.0, self.y, note))
         self.y += 6.0
 
-    def render(self, path, title):
+    def render(self, path, title, legend=None):
+        """legend: [(color, label)] drawn as small swatches in the top-right corner."""
         height_units = self.y + 4.0
         fig_h = height_units * 0.055
         fig, ax = plt.subplots(figsize=(8.5, fig_h))
@@ -83,6 +86,14 @@ class Page:
         ax.invert_yaxis()
         ax.axis("off")
         ax.text(3.0, 1.5, title, fontsize=9.5, color=INK, fontweight="bold", va="top")
+        x_right = PAGE_W - 3.0
+        renderer = fig.canvas.get_renderer()
+        for color, label in reversed(legend or []):  # laid out right to left, swatch left of its label
+            text = ax.text(x_right, 2.6, label, fontsize=6.2, color=MUTED, ha="right", va="center")
+            bbox = text.get_window_extent(renderer).transformed(ax.transData.inverted())
+            swatch_x = bbox.x0 - 0.8 - 1.8
+            ax.add_patch(Rectangle((swatch_x, 1.8), 1.8, 1.6, facecolor="white", edgecolor=color, linewidth=1.0))
+            x_right = swatch_x - 2.4
         for item in self.items:
             if item[0] == "label":
                 _, x, y, text = item
@@ -125,14 +136,14 @@ class Page:
         plt.close(fig)
 
 
-def visualize(instance, episode, judgment, out_path):
+def visualize(instance, episode, judgment, out_path, importance="llm"):
     page = Page()
 
     page.label("ground-truth intent")
     page.box(instance["full_spec"], 3.0, 94.0, CAPTION_BG)
     page.space(1.5)
 
-    page.label(f"redacted details (k = {len(instance['redacted_ids'])})")
+    page.label(f"redacted details ({len(instance['redacted_ids'])})")
     details = {d["id"]: d for d in instance["details"]}
     for detail_id in instance["redacted_ids"]:
         detail = details[detail_id]
@@ -140,7 +151,7 @@ def visualize(instance, episode, judgment, out_path):
         color = DELIVERED if verdict else MISSED
         page.space(3.4)
         page.box(detail["text"], 6.0, 88.0, "white", edge=color,
-                    tag=f"Importance = {detail['importance']:.2f}",
+                    tag=f"Importance = {detail['importance']:.2f}" if importance == "llm" else None,
                     tag_color=color, left_tag=detail["category"].title())
 
     page.arrow("Erode: remaining details rewritten as the user request")
@@ -169,22 +180,19 @@ def visualize(instance, episode, judgment, out_path):
 
     n_delivered = sum(1 for d in instance["redacted_ids"]
                         if judgment["per_detail"].get(str(d), {}).get("delivered"))
+    redacted_importances = [details[i]["importance"] for i in instance["redacted_ids"]]
     page.label("episode metrics")
     page.space(0.5)
     page.metric_row([
-        f"U_rec (LLM) = {judgment['u_rec']['llm']:.3f}",
-        f"U_rec (Equal) = {judgment['u_rec']['equal']:.3f}",
+        f"Utility Recovered = {judgment['u_rec'][importance]:.3f}",
+        f"Clairvoyant Solution = {clairvoyant_u_rec(redacted_importances, episode['n_questions'], importance):.3f}",
         f"Details Delivered = {n_delivered}/{len(instance['redacted_ids'])}",
         f"Questions Asked = {episode['n_questions']}",
     ])
-    redacted_importances = [details[i]["importance"] for i in instance["redacted_ids"]]
-    page.space(1.0)
-    page.metric_row([
-        f"Clairvoyant (LLM) = {clairvoyant_u_rec(redacted_importances, episode['n_questions'], 'llm'):.3f}",
-        f"Clairvoyant (Equal) = {clairvoyant_u_rec(redacted_importances, episode['n_questions'], 'equal'):.3f}",
-    ])
 
-    page.render(out_path, f"Agent: {episode['agent_name']} ({instance['instance_id']})")
+    agent = episode["agent_name"]
+    title = MODE_TITLES.get(agent, f"{agent.replace('_', '-').title()} Mode")
+    page.render(out_path, title, legend=[(DELIVERED, "Detail delivered"), (MISSED, "Detail not delivered")])
 
 
 def main():
@@ -192,6 +200,8 @@ def main():
     parser.add_argument("eval_dir", help="evaluation run directory")
     parser.add_argument("-n", type=int, default=5, help="number of random instances")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--importance", choices=("llm", "equal"), default="llm",
+                        help="which weighting the metrics show (llm also labels each redacted detail's importance)")
     args = parser.parse_args()
 
     with open(os.path.join(args.eval_dir, "config.yaml"), encoding="utf-8") as f:
@@ -218,12 +228,12 @@ def main():
             row = json.loads(line)
             judgments[row["instance_id"]] = row
 
-    out_dir = os.path.join(args.eval_dir, "figures")
+    out_dir = os.path.join(args.eval_dir, "figures", args.importance)
     os.makedirs(out_dir, exist_ok=True)
     chosen = random.Random(args.seed).sample(sorted(episodes), min(args.n, len(episodes)))
     for instance_id in chosen:
         out_path = os.path.join(out_dir, f"{instance_id}.png")
-        visualize(instances[instance_id], episodes[instance_id], judgments[instance_id], out_path)
+        visualize(instances[instance_id], episodes[instance_id], judgments[instance_id], out_path, args.importance)
         print("saved", out_path)
 
 
