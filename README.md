@@ -10,7 +10,7 @@ The pipeline consists of the following stages:
 2. **Training**: RL fine-tune the asking policy with LoRA via the Tinker API
 3. **Evaluation**: Run agents against the simulated user and judge per-detail recovery
 
-The `llm` config group is the frozen environment (synthesis, user simulator, judge, default `gemini-3.5-flash-lite`), the `model` group is the model under test that holds the conversation (default `qwen3-8b`, sampled via Tinker), and the `task` group holds the detail categories and prompts.
+The `llm` config group is the frozen environment (synthesis, user simulator, judge), the `model` group is the model under test that holds the conversation, sampled via Tinker, and the `task` group holds the detail categories and prompts.
 
 ## Installation
 
@@ -42,9 +42,6 @@ and create a `.env` file in the project root with your API keys:
 ```bash
 GEMINI_API_KEY="<YOUR_GEMINI_KEY>"
 TINKER_API_KEY="<YOUR_TINKER_KEY>"
-
-# HuggingFace Configuration (optional, for tokenizer downloads)
-HF_TOKEN="<YOUR_HF_TOKEN>"
 ```
 
 Finally, download and normalize the DOCCI descriptions:
@@ -54,7 +51,7 @@ python scripts/setup_docci.py --limit 500
 ```
 
 > [!NOTE]
-> All commands run from the repo root. `results/` and `logs/` are created there.
+> Every command below runs from the repo root. `data/`, `results/` and `logs/` are resolved against the working directory.
 
 ## 1. Synthesis
 Decompose each description into atomic details, redact some of them (importance-weighted, preferring distinct categories), and erode the rest into a natural user request. The redaction scheme sets how many: `fixed-redactions` redacts exactly `k` per instance, `dynamic-redactions` draws a count per instance uniformly from 1 to a maximum.
@@ -66,9 +63,10 @@ python -m uaug.synthesis.run synthesis=<fixed-redactions|dynamic-redactions>
 
 ### Options
 - `synthesis`: Redaction scheme (`fixed-redactions` | `dynamic-redactions`)
-- `general.k`: Details redacted per instance (`fixed-redactions`), or the upper end of the per-instance count (`dynamic-redactions`)
+- `general.k`: Details redacted per instance, or the upper end of the per-instance count
 - `synthesis.min_details`: Drop sources whose decomposition yields fewer details
-- `synthesis.num_sources`: Number of sources to process (`null` for all)
+- `synthesis.num_sources`: Number of sources to process
+- `synthesis.split_fractions`: Train, val and test shares, split by source
 - `synthesis.resume` / `synthesis.resume_path`: Resume a previous synthesis run
 - `llm`: Environment LLM used to decompose and erode
 
@@ -98,7 +96,7 @@ python -m uaug.training.run \
 ### Options
 - `agent`: The agent to train as (`fixed-asking` | `open-asking`)
 - `agent.k_multiplier`: Question cap per episode as a multiple of the instance's redacted count
-- `training/reward`: `terminal` (u_rec, questions free) | `constant_penalty` (u_rec − c·n) | `exponential_penalty` (question t costs c·g^t) | `discounted_penalty` (γ^n · u_rec)
+- `training/reward`, with `q` the questions asked and `n` the instance's redacted count: `terminal` (u_rec, questions free) | `constant_penalty` (u_rec − c·q) | `exponential_penalty` (question t costs c·g^t) | `discounted_penalty` (γ^q · u_rec)
 - `training.importance_weighting`: Which weighting the reward optimizes (`llm` | `equal`)
 - `training.n_iterations`: Total number of iterations, one gradient step each
 - `training.instances_per_iteration` / `training.group_size`: Rollout batch shape
@@ -132,8 +130,8 @@ python -m uaug.evaluation.run \
 ```
 
 ### Options
-- `agent`: `no-asking` (no questions, the inferability floor) | `fixed-asking` (exactly as many questions as the instance has redacted details) | `open-asking` (model decides when to stop, capped at twice that count)
-- `agent.k_multiplier`: Question cap per episode as a multiple of the instance's redacted count (0, 1 and 2 for the three agents)
+- `agent`: `no-asking` (no questions) | `fixed-asking` (always asks up to the cap) | `open-asking` (model decides when to stop)
+- `agent.k_multiplier`: Question cap per episode as a multiple of the instance's redacted count
 - `general.k`: Match the instances' k
 - `evaluation.split`: `val` | `test`
 - `model.checkpoint`: Tinker sampler path from the training stage (`null` for base weights)
@@ -150,6 +148,4 @@ results/<task>/<dataset>/evaluation/<model>/<agent>/k_<k>/<base|checkpoint>/<dat
 └── config.yaml
 ```
 
-**Summary CSV**: one row per run (agent, mode, split, u_rec and clairvoyant means under both weightings, mean questions)
-
-**Instance visuals**: `python scripts/visualize_eval.py <eval_dir> -n <n>` renders n random episodes as one image each into `<eval_dir>/figures/`
+**Summary CSV**: one row per run (agent, mode, split, episodes, u_rec and clairvoyant means under both weightings, mean questions, etc.)
