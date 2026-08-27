@@ -40,7 +40,7 @@ Do not make any other changes to the image itself."""
 
 FIG_W, MARGIN, GAP = 15.0, 0.25, 0.52
 DIVIDER_GAP = 0.36  # on each side of the divider between the reference and the generated images
-TITLE_H, TOP, BOTTOM = 0.62, 0.12, 0.3
+TITLE_H, TOP, BOTTOM = 0.74, 0.12, 0.3
 
 # agent columns: (key, title, note), the request column is generated from the instance itself
 AGENTS = [
@@ -172,7 +172,7 @@ def render(rows, out_base, caption=None):
             ax = fig.add_axes([x / FIG_W, y / fig_h, card / FIG_W, card / fig_h])
             draw_card(ax, image)
             if title:
-                ax.set_title(title, fontsize=8.5, color=INK, fontweight="bold", pad=14)
+                ax.set_title(title, fontsize=8.5, color=INK, fontweight="bold", pad=22)
             if subtitle:  # just under the frame, well clear of the next row
                 ax.text(0.5, -0.035 - 0.05 / card, subtitle, ha="center", va="top", fontsize=7, color=MUTED,
                         transform=ax.transAxes)
@@ -265,7 +265,7 @@ def main():
                     print(f"generated {path}")
             images.append(Image.open(path) if os.path.exists(path) else None)
             subtitles.append(subtitle)
-        titles = ["User Intent\n(DOCCI reference image)", "User Request\n(eroded prompt, no elicitation)"] + \
+        titles = ["Ground Truth\n(DOCCI reference image)", "User Request\n(eroded prompt, no elicitation)"] + \
             [f"{label}\n({note})" for _, label, note in AGENTS]
         rows.append((images, titles, subtitles))
         caption = textwrap.wrap(f"User request (eroded): {instance['eroded_prompt']}", 170)
