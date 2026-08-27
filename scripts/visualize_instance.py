@@ -1,10 +1,11 @@
 """Render the paper's overview figure for one instance: the ground truth, the user request, the redacted details,
-the clarification dialogue, the agent's output and the judge's verdict, with the images that
-scripts/visualize_images.py made for the instance (run it first, --images is its output directory).
+the clarification dialogue, the agent's output and the judge's verdict. The images are read from the run: the
+reference and request images from <synthesis_dir>/images/ (the synthesis directory the run was evaluated on,
+scripts/generate_images_for_data.py) and the agent's from <eval_dir>/images/ (scripts/generate_images_for_eval.py),
+a card reads "missing" where one is absent.
 
 Usage:
-    python scripts/visualize_instance.py <instance_id> <eval_dir> [--images visuals_images] [--max-words 150]
-        [--out <dir>]
+    python scripts/visualize_instance.py <instance_id> <eval_dir> [--max-words 150] [--out <dir>]
 
 Output goes to scripts/figures/<experiment>/<instance_id>_visual.png and .pdf, the experiment named after the
 evaluation run (k<k>_<agent>-<step or base>, e.g. k3_open-asking-369), or to --out. A final description longer
@@ -410,7 +411,7 @@ def read_jsonl(path):
 
 
 def load_eval(eval_dir):
-    """(instances by id, episodes by id, judgments by id, config) of one evaluation run."""
+    """(instances by id, episodes by id, judgments by id, config, synthesis directory) of one evaluation run."""
     with open(os.path.join(eval_dir, "config.yaml"), encoding="utf-8") as f:
         config = yaml.safe_load(f)
     instances_dir = config["evaluation"]["instances_dir"]
@@ -420,7 +421,7 @@ def load_eval(eval_dir):
     instances = {r["instance_id"]: r for r in read_jsonl(os.path.join(instances_dir, f"instances.{split}.jsonl"))}
     episodes = {r["instance_id"]: r for r in read_jsonl(os.path.join(eval_dir, "episodes.jsonl"))}
     judgments = {r["instance_id"]: r for r in read_jsonl(os.path.join(eval_dir, "judgments.jsonl"))}
-    return instances, episodes, judgments, config
+    return instances, episodes, judgments, config, instances_dir
 
 
 def load_image(path):
@@ -434,19 +435,10 @@ def experiment_name(config):
     return f"k{config['general']['k']}_{config['agent']['name']}-{step}"
 
 
-def describe(config):
-    """The image column key of the evaluated agent, named as in visualize_images.py: the untrained open asker is
-    naive-asking, otherwise the agent's mode."""
-    fixed = config["agent"]["mode"] == "fixed"
-    if not fixed and not config["model"].get("checkpoint"):
-        return "naive-asking"
-    return "fixed-asking" if fixed else "open-asking"
-
-
-def visualize(instance, episode, judgment, config, images, out_base, max_words):
+def visualize(instance, episode, judgment, images, out_base, max_words):
+    """images: reference, request and agent, any of them None when missing."""
     details = {d["id"]: d for d in instance["details"]}
     redacted = [details[i] for i in instance["redacted_ids"]]
-    key = describe(config)
 
     cv = Canvas(FIG_W)
     x0, inner_w = MARGIN, FIG_W - 2 * MARGIN
@@ -478,7 +470,7 @@ def visualize(instance, episode, judgment, config, images, out_base, max_words):
     # bottom row: the split between output and judge searched so that the two panels come out the same height,
     # the judge never narrower than its utility box needs
     def heights(w4):
-        return (output_panel(cv.scratch(), x0, y, w4, episode, images[key], max_words),
+        return (output_panel(cv.scratch(), x0, y, w4, episode, images["agent"], max_words),
                 judge_panel(cv.scratch(), x0 + w4 + GAP, y, inner_w - w4 - GAP, redacted, judgment))
 
     hi = inner_w - GAP - utility_min_width(cv, judgment["u_rec"]) - 2 * PANEL_PAD
@@ -487,7 +479,7 @@ def visualize(instance, episode, judgment, config, images, out_base, max_words):
     x4, x5 = x0, x0 + w4 + GAP
     cv.arrow(x4 + w4 / 2, y - GAP + 0.06, x4 + w4 / 2, y - 0.06)
     row = max(heights(w4))
-    output_panel(cv, x4, y, w4, episode, images[key], max_words, height=row)
+    output_panel(cv, x4, y, w4, episode, images["agent"], max_words, height=row)
     judge_panel(cv, x5, y, w5, redacted, judgment, height=row)
     cv.box(x4, y, w4, row, "white", LINE, radius=0.14, zorder=0.5)
     cv.box(x5, y, w5, row, "white", LINE, radius=0.14, zorder=0.5)
@@ -502,28 +494,27 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("instance", help="instance id, e.g. test_00337.k3")
     parser.add_argument("eval_dir", help="evaluation run of the agent whose episode the figure walks through")
-    parser.add_argument("--images", default="visuals_images",
-                        help="directory with the images from scripts/visualize_images.py")
     parser.add_argument("--max-words", type=int, default=150,
                         help="cut the final description after this many words in the figure (0 shows it whole)")
     parser.add_argument("--out", help="output directory (default scripts/figures/<experiment>)")
     args = parser.parse_args()
 
-    instances, episodes, judgments, config = load_eval(args.eval_dir)
+    instances, episodes, judgments, config, instances_dir = load_eval(args.eval_dir)
     if args.instance not in instances or args.instance not in episodes:
         raise SystemExit(f"{args.instance} is not in the evaluation run {args.eval_dir}")
-    key = describe(config)
-    images = {"reference": load_image(os.path.join(args.images, f"{args.instance}_enhanced.jpg"))
-              or load_image(os.path.join(args.images, f"{args.instance}_original.jpg")),
-              "request": load_image(os.path.join(args.images, f"{args.instance}_request-edit.jpg")),
-              key: load_image(os.path.join(args.images, f"{args.instance}_{key}-edit.jpg"))}
+    data_images = os.path.join(instances_dir, "images")
+    images = {"reference": load_image(os.path.join(data_images, f"{args.instance}_enhanced.jpg"))
+              or load_image(os.path.join(data_images, f"{args.instance}_original.jpg")),
+              "request": load_image(os.path.join(data_images, f"{args.instance}_request.jpg")),
+              "agent": load_image(os.path.join(args.eval_dir, "images", f"{args.instance}.jpg"))}
     missing = [name for name, image in images.items() if image is None]
     if missing:
-        print(f"images missing in {args.images} for {args.instance}: {', '.join(missing)} (run scripts/visualize_images.py first)")
+        print(f"images missing for {args.instance}: {', '.join(missing)} "
+              "(run scripts/generate_images_for_data.py and scripts/generate_images_for_eval.py first)")
 
     out_dir = args.out or os.path.join(os.path.dirname(os.path.abspath(__file__)), "figures", experiment_name(config))
     os.makedirs(out_dir, exist_ok=True)
-    visualize(instances[args.instance], episodes[args.instance], judgments[args.instance], config, images,
+    visualize(instances[args.instance], episodes[args.instance], judgments[args.instance], images,
               os.path.join(out_dir, f"{args.instance}_visual"), args.max_words)
 
 
