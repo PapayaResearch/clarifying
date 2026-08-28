@@ -3,7 +3,7 @@ from typing import Callable, Dict, List, Tuple
 
 from uaug.utils.schema import Turn
 from uaug.utils.wrappers import ChatModel
-from uaug.evaluation.user import format_conversation
+from uaug.utils.user import format_conversation
 
 
 def build_transcript_messages(system_prompt: str, request: str, turns: List[Turn]) -> List[Dict[str, str]]:
@@ -33,12 +33,11 @@ def parse_decision(text: str) -> bool:
 
 @dataclasses.dataclass
 class Asker:
-    """The conversation model asking clarifying questions: fixed mode asks exactly
-    max_questions questions, dynamic mode decides per turn (max_questions caps it)."""
+    """The conversation model asking clarifying questions."""
 
     name: str
     mode: str  # "fixed" | "dynamic"
-    max_questions: int
+    k_multiplier: int
     model: ChatModel
     ask_prompt: str
     final_prompt: str
@@ -48,14 +47,16 @@ class Asker:
         self,
         request: str,
         answer: Callable[[str, List[Turn]], str],
+        n_redacted: int,
     ) -> Tuple[List[Turn], str, int]:
         """One episode: returns (question/answer turns, final output, questions asked)."""
         if self.mode not in ("fixed", "dynamic"):
             raise ValueError(f"Unknown agent mode: {self.mode!r} (expected 'fixed' or 'dynamic')")
 
+        max_questions = self.k_multiplier * n_redacted
         turns: List[Turn] = []
         n = 0
-        while self._wants_question(n, request, turns):
+        while self._wants_question(n, max_questions, request, turns):
             question = self.model.complete(build_chat_messages(self.ask_prompt, request, turns)).text.strip()
             reply = answer(question, turns)
             turns.append(Turn(role="agent_question", text=question))
@@ -64,8 +65,8 @@ class Asker:
         final = self.model.complete(build_transcript_messages(self.final_prompt, request, turns)).text.strip()
         return turns, final, n
 
-    def _wants_question(self, asked: int, request: str, turns: List[Turn]) -> bool:
-        if asked >= self.max_questions:
+    def _wants_question(self, asked: int, max_questions: int, request: str, turns: List[Turn]) -> bool:
+        if asked >= max_questions:
             return False
         if self.mode == "fixed":
             return True

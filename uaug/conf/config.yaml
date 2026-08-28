@@ -4,7 +4,6 @@
 
 defaults:
   - _self_
-  - synthesis: default
   - training: default
   - evaluation: default
   # Orchestration LLM (e.g., gemini-3.5-flash-lite, gemini-3.7-flash)
@@ -15,8 +14,10 @@ defaults:
   - dataset: docci
   # Task to test (e.g., image-gen)
   - task: image-gen
-  # Evaluation agent (e.g., zeroq, asker_fixed, asker_dynamic)
-  - agent: asker_fixed
+  # Redaction scheme (e.g., fixed-redactions, dynamic-redactions)
+  - synthesis: fixed-redactions
+  # Evaluation agent (e.g., no-asking, fixed-asking, open-asking)
+  - agent: fixed-asking
 
 ##############################
 # General Settings
@@ -48,13 +49,13 @@ logging:
 
 user:
   # Hydra target class
-  _target_: uaug.evaluation.user.UserSimulator
+  _target_: uaug.utils.user.UserSimulator
   # The answering model
   model:
     _target_: uaug.utils.wrappers.LanguageModel
     system_prompt: ${task.user_prompt}
     input_schema:
-      _target_: uaug.evaluation.user.user_answer_input_schema
+      _target_: uaug.utils.user.user_answer_input_schema
       intent_description: |
         The complete ground-truth specification of what the user wants.
       conversation_description: |
@@ -62,7 +63,7 @@ user:
       question_description: |
         The assistant's clarification question to answer.
     output_schema:
-      _target_: uaug.evaluation.user.user_answer_output_schema
+      _target_: uaug.utils.user.user_answer_output_schema
       answer_description: |
         The user's answer to the question.
     api_call: ${llm}

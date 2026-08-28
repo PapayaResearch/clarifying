@@ -94,7 +94,7 @@ class Agent:
     _target_: str
     name: str
     mode: str
-    max_questions: int
+    k_multiplier: int
     model: Model
     ask_prompt: str
     final_prompt: str
@@ -124,7 +124,6 @@ class Synthesis:
     sources_path: str
     num_sources: Optional[int]
     task: str
-    k: int
     min_details: int
     split_fractions: Dict[str, float]
     random_seed: int
@@ -155,7 +154,7 @@ class Training:
     instances_dir: str
     split: str
     mode: str
-    max_questions: int
+    k_multiplier: int
     importance_weighting: str
     resume_dir: Optional[str]
     n_iterations: int

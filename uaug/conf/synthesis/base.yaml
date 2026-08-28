@@ -1,5 +1,4 @@
-# Hydra target class
-_target_: uaug.synthesis.pipeline.SynthesisPipeline
+# Shared by every redaction scheme
 
 # Normalized sources file ({source_id, full_spec} per line)
 sources_path: ${dataset.sources_path}
@@ -7,10 +6,6 @@ sources_path: ${dataset.sources_path}
 num_sources: null
 # Task name recorded in instances
 task: ${task.name}
-# Number of details to redact per instance
-k: ${general.k}
-# Drop sources whose decomposition yields fewer details than this (default: k+5)
-min_details: ${add:${general.k},5}
 # Split fractions by source
 split_fractions:
   train: 0.6

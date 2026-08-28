@@ -13,7 +13,7 @@ from tqdm import tqdm
 from uaug.utils.judge import RubricJudge
 from uaug.utils.misc import read_jsonl
 from uaug.utils.schema import TaskInstance, Trajectory
-from uaug.evaluation.user import UserSimulator
+from uaug.utils.user import UserSimulator
 from uaug.training.rollouts import assign_group_advantages, collect_trajectory
 from uaug.training.tinker import TinkerTrainer
 
@@ -25,7 +25,7 @@ class TrainingPipeline:
     instances_dir: str
     split: str
     mode: str
-    max_questions: int
+    k_multiplier: int
     importance_weighting: str
     resume_dir: Optional[str]
     n_iterations: int
@@ -55,7 +55,7 @@ class TrainingPipeline:
             futures = {
                 executor.submit(
                     collect_trajectory, instance, model, self.user, self.judge,
-                    self.reward, self.mode, self.max_questions, self.importance_weighting,
+                    self.reward, self.mode, self.k_multiplier, self.importance_weighting,
                     self.ask_prompt, self.final_prompt, self.decide_prompt,
                 ): instance
                 for instance in jobs

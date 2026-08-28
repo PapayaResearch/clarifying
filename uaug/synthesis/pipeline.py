@@ -1,3 +1,4 @@
+import abc
 import dataclasses
 import hashlib
 import json
@@ -17,13 +18,12 @@ from uaug.utils.wrappers import LanguageModel
 
 
 @dataclasses.dataclass
-class SynthesisPipeline:
+class SynthesisPipeline(abc.ABC):
     """Pipeline turning fully-specified sources into redacted task instances."""
 
     sources_path: str
     num_sources: Optional[int]
     task: str
-    k: int
     min_details: int
     split_fractions: Dict[str, float]
     random_seed: int
@@ -31,6 +31,15 @@ class SynthesisPipeline:
     resume_path: Optional[str]
     decomposer: LanguageModel
     eroder: LanguageModel
+
+    @property
+    @abc.abstractmethod
+    def label(self) -> str:
+        """Name of the results directory level that identifies the redaction scheme."""
+
+    @abc.abstractmethod
+    def n_redactions(self, details: List[Detail], rng: random.Random) -> int:
+        """How many of a source's details this instance redacts (rng is seeded per source)."""
 
     def _load_sources(self) -> List[dict]:
         sources = read_jsonl(self.sources_path)
@@ -42,8 +51,8 @@ class SynthesisPipeline:
         return sources
 
     def _assign_split(self, source_id: str) -> str:
-        """Split by seeded hash of source_id: a source keeps its split across runs,
-        so train sources at one k never reappear in val/test at another."""
+        """Split by seeded hash of source_id: a source keeps its split across runs and redaction schemes,
+        so train sources of one synthesis never reappear in val/test of another."""
         bucket = int(hashlib.sha256(f"{self.random_seed}:{source_id}".encode()).hexdigest(), 16) % 10_000 / 10_000
         cumulative = 0.0
         for split, fraction in self.split_fractions.items():
@@ -61,12 +70,12 @@ class SynthesisPipeline:
             for i, item in enumerate(output.details)
         ]
 
-    def _sample_mask(self, details: List[Detail], rng: random.Random) -> List[int]:
-        """Importance-weighted sample of k details, preferring distinct categories."""
+    def _sample_mask(self, details: List[Detail], n: int, rng: random.Random) -> List[int]:
+        """Importance-weighted sample of n details, preferring distinct categories."""
         mask: List[int] = []
         used_categories: set = set()
         candidates = list(details)
-        while len(mask) < self.k and candidates:
+        while len(mask) < n and candidates:
             # Prefer categories not yet redacted so a mask spans distinct detail types
             fresh = [d for d in candidates if d.category not in used_categories]
             choices = fresh if len(fresh) > 0 else candidates
@@ -87,8 +96,9 @@ class SynthesisPipeline:
             return None, "too_few_details"
 
         rng = random.Random(f"{self.random_seed}:{source_id}")
-        mask = self._sample_mask(details, rng)
-        if len(mask) < self.k:
+        n = self.n_redactions(details, rng)
+        mask = self._sample_mask(details, n, rng)
+        if len(mask) < n:
             return None, "not_enough_redactable"
         mask_set = set(mask)
         kept = [d for d in details if d.id not in mask_set]
@@ -98,7 +108,7 @@ class SynthesisPipeline:
             return None, "erode_failed"
 
         instance = TaskInstance(
-            instance_id=f"{source_id}.k{self.k}",
+            instance_id=f"{source_id}.k{n}",
             task=self.task,
             source_id=source_id,
             full_spec=source["full_spec"],
@@ -147,13 +157,43 @@ class SynthesisPipeline:
             logging.info("Wrote %d %s instances", len(split_instances), split)
 
         category_counts = Counter(d.category for inst in instances for d in inst.redacted)
+        redaction_counts = Counter(len(inst.redacted_ids) for inst in instances)
         report = {
             "n_sources": len(sources),
             "n_instances": len(instances),
             "outcomes": dict(reasons),
             "redacted_category_counts": dict(category_counts),
+            "redacted_count_distribution": {str(n): redaction_counts[n] for n in sorted(redaction_counts)},
             "per_split": {s: sum(1 for i in instances if i.split == s) for s in self.split_fractions},
         }
         with open(os.path.join(results_dir, "synthesis_report.json"), "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)
         logging.info("Synthesis report: %s", json.dumps(report))
+
+
+@dataclasses.dataclass
+class FixedRedactionsSynthesis(SynthesisPipeline):
+    """Every instance redacts exactly k details."""
+
+    k: int
+
+    @property
+    def label(self) -> str:
+        return f"k_{self.k}"
+
+    def n_redactions(self, details: List[Detail], rng: random.Random) -> int:
+        return self.k
+
+
+@dataclasses.dataclass
+class DynamicRedactionsSynthesis(SynthesisPipeline):
+    """Each instance redacts a count drawn uniformly from 1 to max_redacted_details."""
+
+    max_redacted_details: int
+
+    @property
+    def label(self) -> str:
+        return f"k_dyn{self.max_redacted_details}"
+
+    def n_redactions(self, details: List[Detail], rng: random.Random) -> int:
+        return rng.randint(1, min(self.max_redacted_details, len(details) - 1))
