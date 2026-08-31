@@ -35,10 +35,11 @@ def decompose_output_schema(
     return DecomposeOutput
 
 
-def erode_input_schema(details_description: str) -> Type[IOSchema]:
+def erode_input_schema(description_description: str, redacted_description: str) -> Type[IOSchema]:
     class ErodeInput(IOSchema):
         """Input schema for prompt erosion."""
-        details: List[str] = Field(description=details_description)
+        description: str = Field(description=description_description)
+        redacted: List[str] = Field(description=redacted_description)
 
     return ErodeInput
 

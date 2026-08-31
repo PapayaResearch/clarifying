@@ -101,9 +101,11 @@ class SynthesisPipeline(abc.ABC):
         if len(mask) < n:
             return None, "not_enough_redactable"
         mask_set = set(mask)
-        kept = [d for d in details if d.id not in mask_set]
 
-        erode_output = self.eroder.get_response(details=[d.text for d in kept])
+        erode_output = self.eroder.get_response(
+            description=source["full_spec"],
+            redacted=[d.text for d in details if d.id in mask_set],
+        )
         if erode_output is None or not erode_output.request.strip():
             return None, "erode_failed"
 
