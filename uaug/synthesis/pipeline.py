@@ -71,18 +71,13 @@ class SynthesisPipeline(abc.ABC):
         ]
 
     def _sample_mask(self, details: List[Detail], n: int, rng: random.Random) -> List[int]:
-        """Importance-weighted sample of n details, preferring distinct categories."""
+        """Importance-weighted sample of n details without replacement."""
         mask: List[int] = []
-        used_categories: set = set()
         candidates = list(details)
         while len(mask) < n and candidates:
-            # Prefer categories not yet redacted so a mask spans distinct detail types
-            fresh = [d for d in candidates if d.category not in used_categories]
-            choices = fresh if len(fresh) > 0 else candidates
-            weights = [max(d.importance, 0.05) for d in choices]
-            picked = rng.choices(choices, weights=weights, k=1)[0]
+            weights = [max(d.importance, 0.05) for d in candidates]
+            picked = rng.choices(candidates, weights=weights, k=1)[0]
             mask.append(picked.id)
-            used_categories.add(picked.category)
             candidates = [d for d in candidates if d.id != picked.id]
         return sorted(mask)
 
