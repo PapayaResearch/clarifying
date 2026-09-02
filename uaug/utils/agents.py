@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from uaug.utils.schema import Turn
 from uaug.utils.wrappers import ChatModel
@@ -37,11 +37,12 @@ class Asker:
 
     name: str
     mode: str  # "fixed" | "dynamic"
-    k_multiplier: int
     model: ChatModel
     ask_prompt: str
     final_prompt: str
     decide_prompt: str
+    k_multiplier: Optional[int] = None
+    max_questions: Optional[int] = None
 
     def run(
         self,
@@ -53,7 +54,7 @@ class Asker:
         if self.mode not in ("fixed", "dynamic"):
             raise ValueError(f"Unknown agent mode: {self.mode!r} (expected 'fixed' or 'dynamic')")
 
-        max_questions = self.k_multiplier * n_redacted
+        max_questions = self.max_questions if self.max_questions is not None else self.k_multiplier * n_redacted
         turns: List[Turn] = []
         n = 0
         while self._wants_question(n, max_questions, request, turns):

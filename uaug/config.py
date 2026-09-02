@@ -94,11 +94,12 @@ class Agent:
     _target_: str
     name: str
     mode: str
-    k_multiplier: int
     model: Model
     ask_prompt: str
     final_prompt: str
     decide_prompt: str
+    k_multiplier: Optional[int] = None
+    max_questions: Optional[int] = None
 
 
 @dataclass

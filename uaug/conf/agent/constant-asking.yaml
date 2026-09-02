@@ -1,0 +1,14 @@
+# Hydra target class
+_target_: uaug.utils.agents.Asker
+# Agent name recorded in results
+name: constant-asking
+# Fixed mode: the model asks exactly as many questions as the cap
+mode: fixed
+# Absolute question cap per episode, independent of the instance's redacted count
+max_questions: ???
+# The conversation model
+model: ${model}
+# Prompts shared by every agent
+ask_prompt: ${task.ask_prompt}
+final_prompt: ${task.final_prompt}
+decide_prompt: ${task.decide_prompt}
