@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 @dataclasses.dataclass
@@ -41,6 +41,7 @@ class Turn:
     """One transcript event."""
     role: str  # "agent_question" | "user_answer" | "agent_final"
     text: str
+    thinking: Optional[str] = None  # the reasoning behind an agent turn, when the model thinks
 
 
 @dataclasses.dataclass
@@ -58,6 +59,9 @@ class Completion:
     """One sampled model output plus backend-opaque training data (token ids, logprobs)."""
     text: str
     meta: Any = None
+    thinking: Optional[str] = None  # reasoning split off the text, None when the model did not think
+    n_tokens: int = 0  # sampled tokens, reasoning included
+    truncated: bool = False  # hit max_tokens before the stop token
 
 
 @dataclasses.dataclass

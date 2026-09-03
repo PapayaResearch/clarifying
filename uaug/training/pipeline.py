@@ -109,6 +109,7 @@ class TrainingPipeline:
                     }) + "\n")
             metrics = self.trainer.update(trajectories)
 
+            completions = [turn.completion for t in trajectories for turn in t.agent_turns]
             row = {
                 "iteration": iteration,
                 "n_trajectories": len(trajectories),
@@ -116,6 +117,8 @@ class TrainingPipeline:
                 "u_rec_llm_mean": round(statistics.mean(t.judgment.u_rec["llm"] for t in trajectories), 4),
                 "u_rec_equal_mean": round(statistics.mean(t.judgment.u_rec["equal"] for t in trajectories), 4),
                 "n_questions_mean": round(statistics.mean(t.episode.n_questions for t in trajectories), 2),
+                "sampled_tokens_mean": round(statistics.mean(c.n_tokens for c in completions), 1),
+                "truncation_rate": round(statistics.mean(c.truncated for c in completions), 4),
                 **metrics,
             }
             with open(log_path, "a", encoding="utf-8") as f:

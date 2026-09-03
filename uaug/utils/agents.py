@@ -1,7 +1,7 @@
 import dataclasses
 from typing import Callable, Dict, List, Optional, Tuple
 
-from uaug.utils.schema import Turn
+from uaug.utils.schema import Completion, Turn
 from uaug.utils.wrappers import ChatModel
 from uaug.utils.user import format_conversation
 
@@ -49,8 +49,8 @@ class Asker:
         request: str,
         answer: Callable[[str, List[Turn]], str],
         n_redacted: int,
-    ) -> Tuple[List[Turn], str, int]:
-        """One episode: returns (question/answer turns, final output, questions asked)."""
+    ) -> Tuple[List[Turn], Completion, int]:
+        """One episode: returns (question/answer turns, final completion, questions asked)."""
         if self.mode not in ("fixed", "dynamic"):
             raise ValueError(f"Unknown agent mode: {self.mode!r} (expected 'fixed' or 'dynamic')")
 
@@ -58,12 +58,12 @@ class Asker:
         turns: List[Turn] = []
         n = 0
         while self._wants_question(n, max_questions, request, turns):
-            question = self.model.complete(build_chat_messages(self.ask_prompt, request, turns)).text.strip()
-            reply = answer(question, turns)
-            turns.append(Turn(role="agent_question", text=question))
+            asked = self.model.complete(build_chat_messages(self.ask_prompt, request, turns))
+            reply = answer(asked.text, turns)
+            turns.append(Turn(role="agent_question", text=asked.text, thinking=asked.thinking))
             turns.append(Turn(role="user_answer", text=reply))
             n += 1
-        final = self.model.complete(build_transcript_messages(self.final_prompt, request, turns)).text.strip()
+        final = self.model.complete(build_transcript_messages(self.final_prompt, request, turns))
         return turns, final, n
 
     def _wants_question(self, asked: int, max_questions: int, request: str, turns: List[Turn]) -> bool:
