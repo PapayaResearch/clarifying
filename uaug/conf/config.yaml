@@ -15,7 +15,7 @@ defaults:
   # Task to test (e.g., image-gen)
   - task: image-gen
   # Redaction scheme (e.g., fixed-redactions, dynamic-redactions)
-  - synthesis: fixed-redactions
+  - synthesis: dynamic-redactions
   # Evaluation agent (e.g., no-asking, fixed-asking, open-asking)
   - agent: fixed-asking
 
@@ -25,9 +25,9 @@ defaults:
 
 general:
   # Details redacted per instance
-  k: 3
+  k: 15
   # Maximum number of parallel workers
-  max_workers: 128
+  max_workers: 256
   # Random seed for reproducibility
   random_seed: 42
 
