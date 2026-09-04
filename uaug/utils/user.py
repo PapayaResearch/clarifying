@@ -1,5 +1,6 @@
 import dataclasses
-from typing import List, Type
+import random
+from typing import Any, List, Optional, Type
 
 from pydantic import Field
 
@@ -42,9 +43,17 @@ def user_answer_output_schema(answer_description: str) -> Type[IOSchema]:
 
 @dataclasses.dataclass
 class UserSimulator:
-    """Answers agent questions from the hidden full spec."""
+    """Answers agent questions from the hidden full spec, and may run out of patience before the agent's cap."""
 
+    name: str
     model: LanguageModel
+    patience: Optional[Any] = None  # a stopping rule with sample(rng, cap), None answers every question up to the cap
+
+    def budget(self, cap: int, seed: str) -> int:
+        """Questions this user answers in an episode capped at `cap`."""
+        if self.patience is None:
+            return cap
+        return self.patience.sample(random.Random(seed), cap)
 
     def answer(self, instance: TaskInstance, question: str, turns: List[Turn]) -> str:
         response = self.model.get_response(

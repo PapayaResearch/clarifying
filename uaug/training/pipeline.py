@@ -14,6 +14,7 @@ from uaug.utils.judge import RubricJudge
 from uaug.utils.misc import read_jsonl
 from uaug.utils.schema import TaskInstance, Trajectory
 from uaug.utils.user import UserSimulator
+from uaug.utils.agents import question_cap
 from uaug.training.rollouts import assign_group_advantages, collect_trajectory
 from uaug.training.tinker import TinkerTrainer
 
@@ -25,7 +26,8 @@ class TrainingPipeline:
     instances_dir: str
     split: str
     mode: str
-    k_multiplier: int
+    k_multiplier: Optional[int]
+    max_questions: Optional[int]
     importance_weighting: str
     resume_dir: Optional[str]
     n_iterations: int
@@ -47,7 +49,14 @@ class TrainingPipeline:
         logging.info("Loaded %d %s instances from %s", len(instances), self.split, path)
         return instances
 
+    def _budget(self, instance: TaskInstance, iteration: int) -> int:
+        """The instance's question cap, cut to what the user answers. Drawn once per group, so every rollout of the
+        instance shares the budget and the luck of the draw stays out of the group-centred advantage."""
+        cap = question_cap(len(instance.redacted_ids), self.k_multiplier, self.max_questions)
+        return self.user.budget(cap, seed=f"{self.random_seed}:{iteration}:{instance.instance_id}")
+
     def _collect_batch(self, batch: List[TaskInstance], model, iteration: int, max_workers: int) -> List[Trajectory]:
+        budgets = {instance.instance_id: self._budget(instance, iteration) for instance in batch}
         jobs = [instance for instance in batch for _ in range(self.group_size)]
         trajectories: List[Trajectory] = []
         lock = Lock()
@@ -55,7 +64,7 @@ class TrainingPipeline:
             futures = {
                 executor.submit(
                     collect_trajectory, instance, model, self.user, self.judge,
-                    self.reward, self.mode, self.k_multiplier, self.importance_weighting,
+                    self.reward, self.mode, budgets[instance.instance_id], self.importance_weighting,
                     self.ask_prompt, self.final_prompt, self.decide_prompt,
                 ): instance
                 for instance in jobs
@@ -117,6 +126,7 @@ class TrainingPipeline:
                 "u_rec_llm_mean": round(statistics.mean(t.judgment.u_rec["llm"] for t in trajectories), 4),
                 "u_rec_equal_mean": round(statistics.mean(t.judgment.u_rec["equal"] for t in trajectories), 4),
                 "n_questions_mean": round(statistics.mean(t.episode.n_questions for t in trajectories), 2),
+                "budget_mean": round(statistics.mean(t.episode.budget for t in trajectories), 2),
                 "sampled_tokens_mean": round(statistics.mean(c.n_tokens for c in completions), 1),
                 "truncation_rate": round(statistics.mean(c.truncated for c in completions), 4),
                 **metrics,

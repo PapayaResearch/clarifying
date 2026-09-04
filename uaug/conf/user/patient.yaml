@@ -1,5 +1,9 @@
 # Hydra target class
 _target_: uaug.utils.user.UserSimulator
+# User name recorded in results
+name: patient
+# No stopping rule: the budget of an episode is the agent's cap itself
+patience: null
 # The answering model
 model:
   _target_: uaug.utils.wrappers.LanguageModel

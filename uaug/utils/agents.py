@@ -31,6 +31,15 @@ def parse_decision(text: str) -> bool:
     return text.strip().lower().startswith("yes")
 
 
+def question_cap(n_redacted: int, k_multiplier: Optional[int], max_questions: Optional[int]) -> int:
+    """The episode's question cap: an absolute count when set, else k_multiplier times the instance's redacted count."""
+    if max_questions is not None:
+        return max_questions
+    if k_multiplier is None:
+        raise ValueError("Set agent.max_questions or agent.k_multiplier")
+    return k_multiplier * n_redacted
+
+
 @dataclasses.dataclass
 class Asker:
     """The conversation model asking clarifying questions."""
@@ -44,17 +53,20 @@ class Asker:
     k_multiplier: Optional[int] = None
     max_questions: Optional[int] = None
 
+    def cap(self, n_redacted: int) -> int:
+        """The episode's question cap before the user's patience is applied."""
+        return question_cap(n_redacted, self.k_multiplier, self.max_questions)
+
     def run(
         self,
         request: str,
         answer: Callable[[str, List[Turn]], str],
-        n_redacted: int,
+        max_questions: int,
     ) -> Tuple[List[Turn], Completion, int]:
-        """One episode: returns (question/answer turns, final completion, questions asked)."""
+        """One episode within a question budget: returns (question/answer turns, final completion, questions asked)."""
         if self.mode not in ("fixed", "dynamic"):
             raise ValueError(f"Unknown agent mode: {self.mode!r} (expected 'fixed' or 'dynamic')")
 
-        max_questions = self.max_questions if self.max_questions is not None else self.k_multiplier * n_redacted
         turns: List[Turn] = []
         n = 0
         while self._wants_question(n, max_questions, request, turns):

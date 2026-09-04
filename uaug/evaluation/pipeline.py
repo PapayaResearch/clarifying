@@ -27,6 +27,7 @@ class EvaluationPipeline:
     agent: Asker
     user: UserSimulator
     judge: RubricJudge
+    random_seed: int
 
     def _load_instances(self) -> List[TaskInstance]:
         path = os.path.join(self.instances_dir, f"instances.{self.split}.jsonl")
@@ -35,10 +36,13 @@ class EvaluationPipeline:
         return instances
 
     def _run_episode(self, instance: TaskInstance) -> Tuple[Episode, JudgeResult]:
+        # The agent's cap for this instance, cut to what the user is willing to answer
+        cap = self.agent.cap(len(instance.redacted_ids))
+        budget = self.user.budget(cap, seed=f"{self.random_seed}:{instance.instance_id}")
         turns, final, n_questions = self.agent.run(
             request=instance.eroded_prompt,
             answer=lambda question, turns: self.user.answer(instance, question, turns),
-            n_redacted=len(instance.redacted_ids),
+            max_questions=budget,
         )
         episode = Episode(
             instance_id=instance.instance_id,
@@ -46,6 +50,7 @@ class EvaluationPipeline:
             turns=turns + [Turn(role="agent_final", text=final.text, reasoning=final.reasoning)],
             final_output=final.text,
             n_questions=n_questions,
+            budget=budget,
         )
         return episode, self.judge.judge(instance, episode)
 
@@ -80,6 +85,7 @@ class EvaluationPipeline:
         summary = {
             "agent": self.agent.name,
             "mode": self.agent.mode,
+            "user": self.user.name,
             "split": self.split,
             "n_episodes": len(episodes),
             **{
@@ -93,6 +99,7 @@ class EvaluationPipeline:
                 for weighting in ("llm", "equal")
             },
             "n_questions_mean": round(statistics.mean(e.n_questions for e in episodes), 2) if episodes else None,
+            "budget_mean": round(statistics.mean(e.budget for e in episodes), 2) if episodes else None,
             "planning_gap_mean": round(statistics.mean(e.n_questions - k_by_instance[e.instance_id] for e in episodes), 2) if episodes else None,
         }
         with open(os.path.join(results_dir, "summary.csv"), "w", newline="", encoding="utf-8") as f:
