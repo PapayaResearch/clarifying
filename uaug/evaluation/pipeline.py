@@ -43,7 +43,7 @@ class EvaluationPipeline:
         episode = Episode(
             instance_id=instance.instance_id,
             agent_name=self.agent.name,
-            turns=turns + [Turn(role="agent_final", text=final.text, thinking=final.thinking)],
+            turns=turns + [Turn(role="agent_final", text=final.text, reasoning=final.reasoning)],
             final_output=final.text,
             n_questions=n_questions,
         )

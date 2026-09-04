@@ -20,24 +20,24 @@ def make_sampling_params(renderer, max_tokens: int):
     return tinker.types.SamplingParams(max_tokens=max_tokens, stop=renderer.get_stop_sequences())
 
 
-def split_thinking(message: Any) -> Tuple[str, str, bool]:
+def split_reasoning(message: Any) -> Tuple[str, str, bool]:
     """The visible text, the reasoning, and whether the response was well formed, for either shape the renderer returns."""
     content = message["content"]
     if isinstance(content, list):
         text = "".join(p["text"] for p in content if p["type"] == "text")
-        thinking = "\n".join(p["thinking"] for p in content if p["type"] == "thinking")
+        reasoning = "\n".join(p["thinking"] for p in content if p["type"] == "thinking")  # the renderer's own keys
     else:
-        text, thinking = content, ""
+        text, reasoning = content, ""
     well_formed = "<think>" not in text and "</think>" not in text
     if "<think>" in text:
         before, _, rest = text.partition("<think>")
         block, _, after = rest.partition("</think>")
-        thinking = "\n".join(x for x in (thinking, block) if x)
+        reasoning = "\n".join(x for x in (reasoning, block) if x)
         text = before + after
     if "</think>" in text:
         before, _, text = text.rpartition("</think>")
-        thinking = "\n".join(x for x in (thinking, before) if x)
-    return text.strip(), thinking.strip(), well_formed
+        reasoning = "\n".join(x for x in (reasoning, before) if x)
+    return text.strip(), reasoning.strip(), well_formed
 
 
 @dataclasses.dataclass
@@ -57,7 +57,7 @@ class TinkerModel:
             sequence = result.sequences[0]
             # The renderer splits a clean response into its reasoning and its visible text
             message, termination = self.renderer.parse_response(sequence.tokens)
-            text, thinking, well_formed = split_thinking(message)
+            text, reasoning, well_formed = split_reasoning(message)
             if termination.is_clean and well_formed:
                 break
             # A completion that hit max_tokens or left a think tag in its text loses its answer: resample once
@@ -70,7 +70,7 @@ class TinkerModel:
             "logprobs": list(sequence.logprobs),
         }
         return Completion(
-            text=text, meta=meta, thinking=thinking or None,
+            text=text, meta=meta, reasoning=reasoning or None,
             n_tokens=len(sequence.tokens), truncated=not termination.is_clean,
         )
 

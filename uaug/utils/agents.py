@@ -60,7 +60,7 @@ class Asker:
         while self._wants_question(n, max_questions, request, turns):
             asked = self.model.complete(build_chat_messages(self.ask_prompt, request, turns))
             reply = answer(asked.text, turns)
-            turns.append(Turn(role="agent_question", text=asked.text, thinking=asked.thinking))
+            turns.append(Turn(role="agent_question", text=asked.text, reasoning=asked.reasoning))
             turns.append(Turn(role="user_answer", text=reply))
             n += 1
         final = self.model.complete(build_transcript_messages(self.final_prompt, request, turns))

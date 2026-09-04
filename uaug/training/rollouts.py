@@ -48,7 +48,7 @@ def collect_trajectory(
     while wants_question(n):
         asked = sample(build_chat_messages(ask_prompt, request, turns))
         answer = user.answer(instance, asked.text, turns)
-        turns.append(Turn(role="agent_question", text=asked.text, thinking=asked.thinking))
+        turns.append(Turn(role="agent_question", text=asked.text, reasoning=asked.reasoning))
         turns.append(Turn(role="user_answer", text=answer))
         n += 1
     final = sample(build_transcript_messages(final_prompt, request, turns))
@@ -56,7 +56,7 @@ def collect_trajectory(
     episode = Episode(
         instance_id=instance.instance_id,
         agent_name="training",
-        turns=turns + [Turn(role="agent_final", text=final.text, thinking=final.thinking)],
+        turns=turns + [Turn(role="agent_final", text=final.text, reasoning=final.reasoning)],
         final_output=final.text,
         n_questions=n,
     )
