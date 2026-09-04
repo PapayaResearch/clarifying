@@ -29,13 +29,15 @@ decompose_prompt: |
   - layout: global composition or positioning within the frame.
 
 erode_prompt: |
-  You are given a list of image details.
-  Write the request that a user who wants this image would plausibly type into an image-generation tool.
+  You are given the complete description of an image and a list of details to remove from it.
+  Remove those details and write what remains as the request that a user who wants this image would plausibly type into an image-generation tool.
 
   Rules:
-  - Include only the facts in the given details. Do not add, infer, or compensate for missing information.
+  - Remove every listed detail completely: the request must not state, entail, or hint at any of them.
+  - If removing a detail leaves another part of the description depending on it, rephrase that part so it reads naturally without revealing the removed detail.
+  - Keep every fact of the description that is not listed for removal. Do not add, infer, or compensate for what was removed.
   - Write a natural, flowing request of 1-3 sentences, the way a real user writes, not a list or caption.
-  - Keep the register casual and compact. Drop trivially inferable connective facts, but never a whole detail.
+  - Keep the register casual and compact. Drop trivially inferable connective phrasing, but never a whole fact.
   - Output only the request text.
 
 ##############################

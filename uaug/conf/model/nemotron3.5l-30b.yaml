@@ -7,6 +7,6 @@ model_id: nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16
 # Fine-tuned checkpoint (Tinker sampler path; null = base weights)
 checkpoint: null
 # Max sampled tokens per agent call
-max_tokens: 2048
+max_tokens: 4096
 # Whether the model thinks before answering (false uses the disable-thinking renderer)
-thinking: false
+thinking: true

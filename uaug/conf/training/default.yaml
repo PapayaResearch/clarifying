@@ -21,9 +21,9 @@ k_multiplier: ${agent.k_multiplier}
 importance_weighting: equal
 
 # Number of training iterations
-n_iterations: 250
+n_iterations: 400
 # Instances sampled per iteration
-instances_per_iteration: 4
+instances_per_iteration: 8
 # Rollouts per instance (GRPO-style group)
 group_size: 32
 # Save a checkpoint every N iterations

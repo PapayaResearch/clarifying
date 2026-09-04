@@ -35,7 +35,7 @@ class EvaluationPipeline:
         return instances
 
     def _run_episode(self, instance: TaskInstance) -> Tuple[Episode, JudgeResult]:
-        turns, final_output, n_questions = self.agent.run(
+        turns, final, n_questions = self.agent.run(
             request=instance.eroded_prompt,
             answer=lambda question, turns: self.user.answer(instance, question, turns),
             n_redacted=len(instance.redacted_ids),
@@ -43,8 +43,8 @@ class EvaluationPipeline:
         episode = Episode(
             instance_id=instance.instance_id,
             agent_name=self.agent.name,
-            turns=turns + [Turn(role="agent_final", text=final_output)],
-            final_output=final_output,
+            turns=turns + [Turn(role="agent_final", text=final.text, thinking=final.thinking)],
+            final_output=final.text,
             n_questions=n_questions,
         )
         return episode, self.judge.judge(instance, episode)
