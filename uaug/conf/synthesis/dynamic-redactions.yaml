@@ -6,5 +6,5 @@ defaults:
 _target_: uaug.synthesis.pipeline.DynamicRedactionsSynthesis
 # Each instance redacts a count drawn uniformly from 1 to this
 max_redacted_details: ${general.k}
-# Drop sources whose decomposition yields fewer details than this (default: k+2)
+# Drop sources whose decomposition yields fewer details than this (default: k+5)
 min_details: ${add:${general.k},5}
