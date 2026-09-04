@@ -7,6 +7,6 @@ model_id: openai/gpt-oss-20b
 # Fine-tuned checkpoint (Tinker sampler path; null = base weights)
 checkpoint: null
 # Max sampled tokens per agent call
-max_tokens: 2048
+max_tokens: 4096
 # gpt-oss has no disable-thinking renderer, so this must stay true
 thinking: true
