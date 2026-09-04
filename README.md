@@ -10,8 +10,6 @@ The pipeline consists of the following stages:
 2. **Training**: RL fine-tune the asking policy with LoRA via the Tinker API
 3. **Evaluation**: Run agents against the simulated user and judge per-detail recovery
 
-The `llm` config group is the frozen environment (synthesis, user simulator, judge), the `model` group is the model under test that holds the conversation, sampled via Tinker, and the `task` group holds the detail categories and prompts.
-
 ## Installation
 
 Clone the repo:
@@ -54,7 +52,7 @@ python scripts/setup_docci.py --limit 500
 > Every command below runs from the repo root. `data/`, `results/` and `logs/` are resolved against the working directory.
 
 ## 1. Synthesis
-Decompose each description into atomic details, redact some of them (importance-weighted, preferring distinct categories), and erode the rest into a natural user request. The redaction scheme sets how many: `fixed-redactions` redacts exactly `k` per instance, `dynamic-redactions` draws a count per instance uniformly from 1 to a maximum.
+Decompose each description into atomic details, redact some of them (importance-weighted), and erode the description into a natural user request by removing the redacted details and rewriting what remains. The redaction scheme sets how many: `fixed-redactions` redacts exactly `k` per instance, `dynamic-redactions` draws a count per instance uniformly from 1 to a maximum.
 
 ### Run
 ```bash
@@ -96,7 +94,8 @@ python -m uaug.training.run \
 ### Options
 - `agent`: The agent to train as (`fixed-asking` | `open-asking`)
 - `agent.k_multiplier`: Question cap per episode as a multiple of the instance's redacted count
-- `training/reward`, with `q` the questions asked and `n` the instance's redacted count: `terminal` (u_rec, questions free) | `constant_penalty` (u_rec − c·q) | `exponential_penalty` (question t costs c·g^t) | `discounted_penalty` (γ^q · u_rec)
+- `user`: `patient` (answers every question up to the cap) | `impatient-power` (answers a random number of them, P(T ≤ t) = (t / cap)^shape)
+- `training/reward`, with `q` the questions asked: `terminal` (u_rec, questions free) | `constant_penalty` (u_rec − c·q) | `exponential_penalty` (question t costs c·g^t) | `discounted_penalty` (γ^q · u_rec)
 - `training.importance_weighting`: Which weighting the reward optimizes (`llm` | `equal`)
 - `training.n_iterations`: Total number of iterations, one gradient step each
 - `training.instances_per_iteration` / `training.group_size`: Rollout batch shape
@@ -113,7 +112,7 @@ results/<task>/<dataset>/training/<model>/<agent>/k_<k>/<reward>/<weighting>/<da
 └── config.yaml
 ```
 
-**Training log**: per-iteration reward, u_rec (both weightings), and question means
+**Training log**: per-iteration reward, u_rec (both weightings), question and budget means, sampled tokens per agent call and the truncation rate
 
 **Trajectories**: every judged rollout's transcript, judgment, reward, and advantage
 
@@ -130,8 +129,9 @@ python -m uaug.evaluation.run \
 ```
 
 ### Options
-- `agent`: `no-asking` (no questions) | `fixed-asking` (always asks up to the cap) | `open-asking` (model decides when to stop)
+- `agent`: `no-asking` (no questions) | `fixed-asking` (always asks up to the cap) | `open-asking` (model decides when to stop) | `constant-asking` (a constant question count per episode)
 - `agent.k_multiplier`: Question cap per episode as a multiple of the instance's redacted count
+- `user`: `patient` | `impatient-power`, as in training
 - `general.k`: Match the instances' k
 - `evaluation.split`: `val` | `test`
 - `model.checkpoint`: Tinker sampler path from the training stage (`null` for base weights)
@@ -148,4 +148,4 @@ results/<task>/<dataset>/evaluation/<model>/<agent>/k_<k>/<base|checkpoint>/<dat
 └── config.yaml
 ```
 
-**Summary CSV**: one row per run (agent, mode, split, episodes, u_rec and clairvoyant means under both weightings, mean questions, etc.)
+**Summary CSV**: one row per run (agent, mode, user, split, episodes, u_rec and clairvoyant means under both weightings, mean questions and budget)
