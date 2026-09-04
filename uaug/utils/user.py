@@ -42,12 +42,40 @@ def user_answer_output_schema(answer_description: str) -> Type[IOSchema]:
 
 
 @dataclasses.dataclass
+class PowerPatience:
+    """How many questions the user answers before asking for the result: T over 1..cap with P(T <= t) = (t / cap) ** shape."""
+
+    shape: float = 1.5
+    name: str = "power"
+
+    def cdf(self, t: int, cap: int) -> float:
+        """P(T <= t)."""
+        return (min(max(t, 0), cap) / cap) ** self.shape
+
+    def pmf(self, cap: int) -> List[float]:
+        """P(T = t) for t = 1..cap."""
+        return [self.cdf(t, cap) - self.cdf(t - 1, cap) for t in range(1, cap + 1)]
+
+    def hazard(self, t: int, cap: int) -> float:
+        """P(T = t | T >= t): the chance question t is the last one answered, given it was asked."""
+        remaining = 1.0 - self.cdf(t - 1, cap)
+        return 1.0 if remaining <= 0 else (self.cdf(t, cap) - self.cdf(t - 1, cap)) / remaining
+
+    def sample(self, rng: random.Random, cap: int) -> int:
+        """Draw T by inverting the cdf: the smallest t with P(T <= t) >= u."""
+        if cap <= 0:
+            return 0
+        u = rng.random()
+        return next((t for t in range(1, cap + 1) if self.cdf(t, cap) >= u), cap)
+
+
+@dataclasses.dataclass
 class UserSimulator:
     """Answers agent questions from the hidden full spec, and may run out of patience before the agent's cap."""
 
     name: str
     model: LanguageModel
-    patience: Optional[Any] = None  # a stopping rule with sample(rng, cap), None answers every question up to the cap
+    patience: Optional[Any] = None
 
     def budget(self, cap: int, seed: str) -> int:
         """Questions this user answers in an episode capped at `cap`."""
