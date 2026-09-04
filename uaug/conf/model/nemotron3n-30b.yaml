@@ -9,4 +9,4 @@ checkpoint: null
 # Max sampled tokens per agent call
 max_tokens: 2048
 # Whether the model thinks before answering (false uses the disable-thinking renderer)
-thinking: false
+thinking: true
