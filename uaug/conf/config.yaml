@@ -4,6 +4,7 @@
 
 defaults:
   - _self_
+  - judge: default
   - training: default
   - evaluation: default
   # Orchestration LLM (e.g., gemini-3.5-flash-lite, gemini-3.7-flash)
@@ -16,8 +17,10 @@ defaults:
   - task: image-gen
   # Redaction scheme (e.g., fixed-redactions, dynamic-redactions)
   - synthesis: dynamic-redactions
-  # Evaluation agent (e.g., no-asking, fixed-asking, open-asking)
+  # Evaluation agent (e.g., no-asking, constant-asking, fixed-asking, open-asking)
   - agent: fixed-asking
+  # User simulator (e.g., patient, impatient-power)
+  - user: patient
 
 ##############################
 # General Settings
@@ -42,51 +45,3 @@ logging:
   results_dir: ${hydra:runtime.cwd}/results
   # Also log to console
   console: false
-
-##############################
-# User Simulator
-##############################
-
-user:
-  # Hydra target class
-  _target_: uaug.utils.user.UserSimulator
-  # The answering model
-  model:
-    _target_: uaug.utils.wrappers.LanguageModel
-    system_prompt: ${task.user_prompt}
-    input_schema:
-      _target_: uaug.utils.user.user_answer_input_schema
-      intent_description: |
-        The complete ground-truth specification of what the user wants.
-      conversation_description: |
-        The conversation so far, with the user's original request and any question-answer turns.
-      question_description: |
-        The assistant's clarification question to answer.
-    output_schema:
-      _target_: uaug.utils.user.user_answer_output_schema
-      answer_description: |
-        The user's answer to the question.
-    api_call: ${llm}
-
-##############################
-# Rubric Judge
-##############################
-
-judge:
-  # Hydra target class
-  _target_: uaug.utils.judge.RubricJudge
-  # The rubric checker: one yes/no verdict per (check, text) pair
-  checker:
-    _target_: uaug.utils.wrappers.LanguageModel
-    system_prompt: ${task.judge_prompt}
-    input_schema:
-      _target_: uaug.utils.judge.check_input_schema
-      check_description: |
-        The yes/no question about the text to verify.
-      text_description: |
-        The only text to judge the check against.
-    output_schema:
-      _target_: uaug.utils.judge.check_output_schema
-      satisfied_description: |
-        Whether the text states or clearly entails the fact.
-    api_call: ${llm}

@@ -39,9 +39,9 @@ class TaskInstance:
 @dataclasses.dataclass
 class Turn:
     """One transcript event."""
-    role: str  # "agent_question" | "user_answer" | "agent_final"
+    role: str
     text: str
-    thinking: Optional[str] = None  # the reasoning behind an agent turn, when the model thinks
+    reasoning: Optional[str] = None
 
 
 @dataclasses.dataclass
@@ -52,6 +52,7 @@ class Episode:
     turns: List[Turn]
     final_output: str
     n_questions: int
+    budget: Optional[int] = None
 
 
 @dataclasses.dataclass
@@ -59,9 +60,9 @@ class Completion:
     """One sampled model output plus backend-opaque training data (token ids, logprobs)."""
     text: str
     meta: Any = None
-    thinking: Optional[str] = None  # reasoning split off the text, None when the model did not think
-    n_tokens: int = 0  # sampled tokens, reasoning included
-    truncated: bool = False  # hit max_tokens before the stop token
+    reasoning: Optional[str] = None
+    n_tokens: int = 0
+    truncated: bool = False
 
 
 @dataclasses.dataclass

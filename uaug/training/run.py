@@ -29,11 +29,12 @@ def main(cfg: Config):
     log_dir = os.path.join(cfg.logging.log_dir, "training")
     log_file = os.path.join(log_dir, current_date + ".log")
     model_dir = cfg.model.name + ("-thinking" if cfg.model.thinking else "")
+    agent_dir = cfg.agent.name + ("" if cfg.user.name == "patient" else f"-{cfg.user.name}")
     if cfg.training.resume_dir:
         results_dir = cfg.training.resume_dir
     else:
         results_dir = os.path.join(
-            cfg.logging.results_dir, cfg.task.name, cfg.dataset.name, "training", model_dir, cfg.agent.name,
+            cfg.logging.results_dir, cfg.task.name, cfg.dataset.name, "training", model_dir, agent_dir,
             f"k_{cfg.general.k}", cfg.training.reward.name, cfg.training.importance_weighting, current_date
         )
     os.makedirs(log_dir, exist_ok=True)

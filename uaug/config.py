@@ -105,7 +105,9 @@ class Agent:
 @dataclass
 class User:
     _target_: str
+    name: str
     model: LanguageModel
+    patience: Optional[Any] = None
 
 
 @dataclass
@@ -155,7 +157,8 @@ class Training:
     instances_dir: str
     split: str
     mode: str
-    k_multiplier: int
+    k_multiplier: Optional[int]
+    max_questions: Optional[int]
     importance_weighting: str
     resume_dir: Optional[str]
     n_iterations: int
@@ -185,6 +188,7 @@ class Evaluation:
     agent: Agent
     user: User
     judge: Judge
+    random_seed: int
 
 
 ##############################
