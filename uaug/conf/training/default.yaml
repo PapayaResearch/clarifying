@@ -1,7 +1,6 @@
 # Swappable config groups
 defaults:
   - reward: terminal
-  - trainer: tinker
   - _self_
 
 # Hydra target class
@@ -30,6 +29,20 @@ instances_per_iteration: 8
 group_size: 32
 # Save a checkpoint every N iterations
 save_every: 5
+
+# Trainer: LoRA updates through Tinker (needs TINKER_API_KEY in .env)
+trainer:
+  _target_: uaug.training.tinker.TinkerTrainer
+  # Tinker base model to attach LoRA to
+  base_model: ${model.model_id}
+  # LoRA rank
+  lora_rank: 32
+  # Adam learning rate
+  learning_rate: 4e-5
+  # Max sampled tokens per agent turn
+  max_tokens: ${model.max_tokens}
+  # Whether the model thinks during rollouts
+  thinking: ${model.thinking}
 
 # Prompts (same as evaluation prompts)
 ask_prompt: ${agent.ask_prompt}
