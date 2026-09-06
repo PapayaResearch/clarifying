@@ -19,7 +19,7 @@ defaults:
   - synthesis: variable-redactions
   # Evaluation agent (e.g., no-asking, constant-asking, fixed-asking, open-asking)
   - agent: fixed-asking
-  # User simulator (e.g., patient, impatient-power)
+  # User simulator (e.g., patient, impatient)
   - user: patient
 
 ##############################

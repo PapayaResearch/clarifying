@@ -75,7 +75,7 @@ class UserSimulator:
 
     name: str
     model: LanguageModel
-    patience: Optional[Any] = None
+    patience: Optional[PowerPatience] = None
 
     def budget(self, cap: int, seed: str) -> int:
         """Questions this user answers in an episode capped at `cap`."""
