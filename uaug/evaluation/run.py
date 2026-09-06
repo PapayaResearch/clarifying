@@ -30,10 +30,9 @@ def main(cfg: Config):
     log_file = os.path.join(log_dir, current_date + ".log")
     weights = cfg.model.checkpoint.split("/")[-1] if cfg.model.checkpoint else "base"
     model_dir = cfg.model.name + ("-thinking" if cfg.model.thinking else "")
-    agent_dir = cfg.agent.name + ("" if cfg.user.name == "patient" else f"-{cfg.user.name}")
     results_dir = os.path.join(
-        cfg.logging.results_dir, cfg.task.name, cfg.dataset.name, "evaluation", model_dir, agent_dir,
-        f"k_{cfg.general.k}", weights, current_date
+        cfg.logging.results_dir, cfg.task.name, cfg.dataset.name, "evaluation", model_dir, cfg.agent.name, cfg.user.name,
+        f"k_{cfg.general.k}", cfg.evaluation.split, weights, current_date
     )
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(results_dir, exist_ok=True)
