@@ -183,7 +183,7 @@ class FixedRedactionsSynthesis(SynthesisPipeline):
 
 
 @dataclasses.dataclass
-class DynamicRedactionsSynthesis(SynthesisPipeline):
+class VariableRedactionsSynthesis(SynthesisPipeline):
     """Each instance redacts a count drawn uniformly from 1 to max_redacted_details."""
 
     max_redacted_details: int

@@ -15,8 +15,8 @@ defaults:
   - dataset: docci
   # Task to test (e.g., image-gen)
   - task: image-gen
-  # Redaction scheme (e.g., fixed-redactions, dynamic-redactions)
-  - synthesis: dynamic-redactions
+  # Redaction scheme (e.g., fixed-redactions, variable-redactions)
+  - synthesis: variable-redactions
   # Evaluation agent (e.g., no-asking, constant-asking, fixed-asking, open-asking)
   - agent: fixed-asking
   # User simulator (e.g., patient, impatient-power)
