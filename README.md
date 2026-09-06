@@ -52,15 +52,15 @@ python scripts/setup_docci.py --limit 500
 > Every command below runs from the repo root. `data/`, `results/` and `logs/` are resolved against the working directory.
 
 ## 1. Synthesis
-Decompose each description into atomic details, redact some of them (importance-weighted), and erode the description into a natural user request by removing the redacted details and rewriting what remains. The redaction scheme sets how many: `fixed-redactions` redacts exactly `k` per instance, `dynamic-redactions` draws a count per instance uniformly from 1 to a maximum.
+Decompose each description into atomic details, redact some of them (importance-weighted), and erode the description into a natural user request by removing the redacted details and rewriting what remains. The redaction scheme sets how many: `fixed-redactions` redacts exactly `k` per instance, `variable-redactions` draws a count per instance uniformly from 1 to a maximum.
 
 ### Run
 ```bash
-python -m uaug.synthesis.run synthesis=<fixed-redactions|dynamic-redactions>
+python -m uaug.synthesis.run synthesis=<fixed-redactions|variable-redactions>
 ```
 
 ### Options
-- `synthesis`: Redaction scheme (`fixed-redactions` | `dynamic-redactions`)
+- `synthesis`: Redaction scheme (`fixed-redactions` | `variable-redactions`)
 - `general.k`: Details redacted per instance, or the upper end of the per-instance count
 - `synthesis.min_details`: Drop sources whose decomposition yields fewer details
 - `synthesis.num_sources`: Number of sources to process
@@ -94,7 +94,7 @@ python -m uaug.training.run \
 ### Options
 - `agent`: The agent to train as (`fixed-asking` | `open-asking`)
 - `agent.k_multiplier`: Question cap per episode as a multiple of the instance's redacted count
-- `user`: `patient` (answers every question up to the cap) | `impatient-power` (answers a random number of them, P(T ≤ t) = (t / cap)^shape)
+- `user`: `patient` (answers every question up to the cap) | `impatient` (answers a random number of them, P(T ≤ t) = (t / cap)^shape)
 - `training/reward`, with `q` the questions asked: `terminal` (u_rec, questions free) | `constant_penalty` (u_rec − c·q) | `exponential_penalty` (question t costs c·g^t) | `discounted_penalty` (γ^q · u_rec)
 - `training.importance_weighting`: Which weighting the reward optimizes (`llm` | `equal`)
 - `training.n_iterations`: Total number of iterations, one gradient step each
@@ -105,7 +105,7 @@ python -m uaug.training.run \
 
 ### Outputs
 ```
-results/<task>/<dataset>/training/<model>/<agent>/k_<k>/<reward>/<weighting>/<datetime>/
+results/<task>/<dataset>/training/<model>/<agent>/<user>/k_<k>/<reward>/<weighting>/<datetime>/
 ├── training_log.jsonl
 ├── trajectories.jsonl
 ├── checkpoints.jsonl
@@ -131,7 +131,7 @@ python -m uaug.evaluation.run \
 ### Options
 - `agent`: `no-asking` (no questions) | `fixed-asking` (always asks up to the cap) | `open-asking` (model decides when to stop) | `constant-asking` (a constant question count per episode)
 - `agent.k_multiplier`: Question cap per episode as a multiple of the instance's redacted count
-- `user`: `patient` | `impatient-power`, as in training
+- `user`: `patient` | `impatient`, as in training
 - `general.k`: Match the instances' k
 - `evaluation.split`: `val` | `test`
 - `model.checkpoint`: Tinker sampler path from the training stage (`null` for base weights)
@@ -139,7 +139,7 @@ python -m uaug.evaluation.run \
 
 ### Outputs
 ```
-results/<task>/<dataset>/evaluation/<model>/<agent>/k_<k>/<base|checkpoint>/<datetime>/
+results/<task>/<dataset>/evaluation/<model>/<agent>/<user>/k_<k>/<split>/<base|checkpoint>/<datetime>/
 ├── episodes.jsonl
 ├── judgments.jsonl
 ├── summary.csv
