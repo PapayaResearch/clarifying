@@ -1,17 +1,18 @@
 """The paper's overview figure of one episode: ground truth and user request side by side with the redacted details
-under them, the clarification dialogue, then the agent's output beside the judge's verdict. Images are read from
-<synthesis_dir>/images/ (generate_images_for_data.py) and <eval_dir>/images/ (generate_images_for_eval.py), a card
-reads "missing" where one is absent.
+under them, the clarification dialogue, then the agent's output with the utility recovered under it beside the judge's
+checks. Images are read from <synthesis_dir>/images/ (generate_images_for_data.py) and <eval_dir>/images/
+(generate_images_for_eval.py), a card reads "missing" where one is absent.
 
 Usage:
     python scripts/visualize_instance.py <instance_id> <eval_dir> [--max-words 150] [--out <dir>]
 
 Output: <instance_id>_visual.png and .pdf in scripts/figures/k<k>_<agent>-<label>/ (e.g. k15_open-asking-patient) or
-in --out. A final description longer than --max-words is cut with an ellipsis, the judge saw the whole text.
+in --out. The ground truth and the output are cut with an ellipsis to the height of their image (the output after
+--max-words first), the judge saw the whole text.
 """
 import argparse
+import math
 import os
-from functools import partial
 
 import matplotlib
 
@@ -22,27 +23,37 @@ from matplotlib.patches import Circle, FancyBboxPatch, Polygon  # noqa: E402
 
 from visualize_images import SCRIPTS, draw_card, load_eval, load_image, run_label  # noqa: E402
 
-INK, MUTED, LINE = "#3c4043", "#80868b", "#dadce0"
+INK, MUTED, LINE = "#3c4043", "#5f6368", "#dadce0"
 CAPTION_BG, USER_BG, AGENT_BG = "#f8f9fa", "#f1f3f4", "#e8f0fe"
 DELIVERED, MISSED = "#188038", "#c5221f"
 
 # layout, everything in inches
-FIG_W = 10.9
+FIG_W = 12.5
 MARGIN = 0.4
-GAP = 0.36  # between panels along the pipeline, the arrows span it
-PANEL_PAD = 0.22  # inside a panel
-TITLE_PAD = 0.16  # above a panel title
-HEADER_GAP = 0.1  # under a panel title
+GAP = 0.3  # between panels along the pipeline, the arrows span it
+PANEL_PAD = 0.18  # inside a panel
+TITLE_PAD = 0.13  # above a panel title
+HEADER_GAP = 0.08  # under a panel title
 CARD_SIDE = 2.1  # image cards
-FONT, SMALL, TINY = 7.4, 6.5, 5.8
-PAD = 0.1  # inside text boxes
+TOP_SPLIT = 0.5  # the share of the width the ground truth takes beside the user request
+OUTPUT_SHARE = 0.42  # the share the agent output and the utility box under it take beside the judge
+QUESTION_SHARE = 0.67  # the share of the dialogue width the agent questions take, the answers get the rest
+CHECK_COLUMNS = 2  # columns of judge checks, each row as tall as its tallest check
+UTILITY_GAP = 0.14  # between the output panel and the utility box under it
+FONT, TINY = 10.0, 8.0
+TITLE_SIZE = 11.5  # numbered panel titles
+SUBTITLE_SIZE = 9.0  # the redacted details heading
+TAG_SIZE = 8.3  # the AGENT QUESTION and USER ANSWER tags over the bubbles
+UTILITY_SIZE = 10.5  # the utility label and values
+PAD = 0.09  # inside text boxes
+LABEL_GAP = 0.06  # between a detail's text and its (category, weight) label
+CHECK_PAD = 0.06  # above and below a judge check's text
 RADIUS = 0.08
-UTILITY_LABEL = "Utility recovered"
-UTILITY_INSET = PAD + 0.04
+UTILITY_INSET = PAD + 0.14
 
 
 def line_height(size):
-    return 1.38 * size / 72
+    return 1.32 * size / 72
 
 
 class Canvas:
@@ -126,169 +137,36 @@ class Canvas:
 # Blocks: each draws at (x, y) within width w and returns the height it used
 
 
-def paragraph(cv, x, y, w, text, bg, tail=None, tag=None, tag_side="right"):
-    """Wrapped text in a rounded box, an optional small tag above one of its top corners."""
+def paragraph(cv, x, y, w, text, bg, side=None, tag=None):
+    """Wrapped text in a rounded box, a chat tail and a small tag above the corner on the given side."""
     lines = cv.wrap(text, w - 2 * PAD, FONT)
     step = line_height(FONT)
     h = len(lines) * step + 2 * PAD
-    cv.box(x, y, w, h, bg, tail=tail)
+    cv.box(x, y, w, h, bg, tail=side)
     for i, line in enumerate(lines):
         cv.text(x + PAD, y + PAD + (i + 0.5) * step, line)
     if tag:
-        tx, ha = (x + w, "right") if tag_side == "right" else (x, "left")
-        cv.text(tx, y - 0.03, tag, SMALL, MUTED, ha=ha, va="bottom")
+        tx, ha = (x + w, "right") if side == "right" else (x, "left")
+        cv.text(tx, y - 0.03, tag, TAG_SIZE, MUTED, ha=ha, va="bottom")
     return h
 
 
-def header(cv, x, y, number, title):
-    """Panel title, numbered in a dark disc when a number is given."""
-    r = 0.095
-    if number is not None:
-        cv.circle(x + r, y + r, r, INK)
-        cv.text(x + r, y + r + 0.005, str(number), 6.4, "white", ha="center", weight="bold")
-        x += 2 * r + 0.1
-    cv.text(x, y + r, title.upper(), 7.0, INK, weight="bold")
-    return 2 * r
+def fitted(cv, text, w, max_h):
+    """The text cut at a word boundary with an ellipsis, so that its paragraph box of width w is at most max_h tall."""
+    def fits(t):
+        return paragraph(cv.scratch(), 0, 0, w, t, "white") <= max_h
 
-
-def detail_card(cv, x, y, w, detail, height=None):
-    """A dashed card with the detail's category on top and its text wrapped below, at the given height when set so
-    that a row of cards lines up."""
-    label_h = line_height(TINY) + 0.05
-    lines = cv.wrap(detail["text"], w - 2 * PAD, FONT)
-    step = line_height(FONT)
-    h = height or PAD + label_h + len(lines) * step + PAD
-    cv.box(x, y, w, h, "white", LINE, dashed=True)
-    cv.text(x + PAD, y + PAD + 0.5 * line_height(TINY), detail["category"].upper(), TINY, MUTED, weight="bold")
-    for i, line in enumerate(lines):
-        cv.text(x + PAD, y + PAD + label_h + (i + 0.5) * step, line, FONT, INK)
-    return h
-
-
-def check_row(cv, x, y, w, text, delivered):
-    """The judge's check question after a tick or a cross, the box edged in the verdict's color."""
-    color, glyph = (DELIVERED, "✓") if delivered else (MISSED, "✗")
-    lead = PAD + cv.measure(glyph, 8.5, "bold") + 0.07
-    lines = cv.wrap(text, w - lead - PAD, FONT)
-    step = line_height(FONT)
-    h = len(lines) * step + 2 * PAD
-    cv.box(x, y, w, h, "white", color)
-    cv.text(x + PAD, y + PAD + 0.5 * step, glyph, 8.5, color, weight="bold")
-    for i, line in enumerate(lines):
-        cv.text(x + lead, y + PAD + (i + 0.5) * step, line, FONT, INK)
-    return h
-
-
-def runs_width(cv, runs):
-    """runs: [(text, size, weight, color, gap_after)], the trailing gap not counted."""
-    return sum(cv.measure(text, size, weight) + gap for text, size, weight, _, gap in runs) - runs[-1][4]
-
-
-def draw_runs(cv, x, y, runs):
-    for text, size, weight, color, gap in runs:
-        cv.text(x, y, text, size, color, weight=weight)
-        x += cv.measure(text, size, weight) + gap
-
-
-def utility_groups(u_rec):
-    """The two (value, weighting note) run groups of the utility box."""
-    return [[(f"{u_rec['equal']:.2f}", 9.5, "bold", INK, 0.06),
-             ("(details weighed equally)", TINY, "normal", MUTED, 0.12)],
-            [(f"{u_rec['llm']:.2f}", 9.5, "bold", INK, 0.06),
-             ("(details weighed by LLM-assigned importance)", TINY, "normal", MUTED, 0.0)]]
-
-
-def utility_min_width(cv, u_rec):
-    """The narrowest utility box whose narrowest layout (label above the stacked values) still fits."""
-    return 2 * UTILITY_INSET + max(runs_width(cv, group) for group in utility_groups(u_rec))
-
-
-def utility_box(cv, x, y, w, u_rec):
-    """Utility recovered under both weightings in one soft box: the label at the left, the two values with their
-    weighting notes centered beside it, on one line when they fit and stacked otherwise, the label moving above the
-    stacked values when even that is too wide."""
-    groups = utility_groups(u_rec)
-    label_w = cv.measure(UTILITY_LABEL, SMALL)
-    left, right = x + UTILITY_INSET + label_w + 0.3, x + w - UTILITY_INSET
-    line = groups[0] + [("/", SMALL, "normal", MUTED, 0.12)] + groups[1]
-    block = max(runs_width(cv, group) for group in groups)
-    if runs_width(cv, line) <= right - left:  # one line
-        h = 0.4
-        cv.box(x, y, w, h, CAPTION_BG, LINE)
-        cv.text(x + UTILITY_INSET, y + h / 2, UTILITY_LABEL, SMALL, MUTED)
-        draw_runs(cv, left + (right - left - runs_width(cv, line)) / 2, y + h / 2, line)
-        return h
-    if block <= right - left:  # label beside the two stacked lines
-        h = 0.58
-        cv.box(x, y, w, h, CAPTION_BG, LINE)
-        cv.text(x + UTILITY_INSET, y + h / 2, UTILITY_LABEL, SMALL, MUTED)
-        for i, group in enumerate(groups):
-            draw_runs(cv, left + (right - left - block) / 2, y + h / 2 + (i - 0.5) * 0.22, group)
-        return h
-    h = 0.8  # label above the two stacked lines
-    cv.box(x, y, w, h, CAPTION_BG, LINE)
-    cv.text(x + UTILITY_INSET, y + 0.17, UTILITY_LABEL, SMALL, MUTED)
-    for i, group in enumerate(groups):
-        draw_runs(cv, x + (w - block) / 2, y + 0.42 + i * 0.22, group)
-    return h
-
-
-# Panels: each lays out its content from the panel's top-left corner and returns the panel height
-
-
-def image_text_panel(cv, x, y, w, number, title, image, text, bg, tail=None, height=None):
-    """A title, then an image card beside a text box, each centered vertically in the space under the title, which
-    fills the panel when its height is given."""
-    px, py, pw = x + PANEL_PAD, y + TITLE_PAD, w - 2 * PANEL_PAD
-    hh = header(cv, px, py, number, title) + HEADER_GAP
-    frame = 0.035 * CARD_SIDE  # the card frame reaches this far outside the card
-    image_h = CARD_SIDE + 2 * frame
-    tx, tw = px + CARD_SIDE + 0.3, pw - CARD_SIDE - 0.3
-    text_h = paragraph(cv.scratch(), tx, 0, tw, text, bg)
-    area = max(image_h, text_h, (height or 0) - TITLE_PAD - hh - PANEL_PAD)
-    cv.image(px, py + hh + (area - image_h) / 2 + frame, CARD_SIDE, image)
-    paragraph(cv, tx, py + hh + (area - text_h) / 2, tw, text, bg, tail=tail)
-    return TITLE_PAD + hh + area + PANEL_PAD
-
-
-def redacted_panel(cv, x, y, w, redacted):
-    """The redacted details as a row of dashed cards of one height."""
-    px, py, pw = x + PANEL_PAD, y + TITLE_PAD, w - 2 * PANEL_PAD
-    n = len(redacted)
-    cy = py + header(cv, px, py, None, "Redacted details") + HEADER_GAP
-    gap = 0.2
-    cw = (pw - gap * (n - 1)) / n
-    h = max(detail_card(cv.scratch(), px, cy, cw, detail) for detail in redacted)
-    for i, detail in enumerate(redacted):
-        detail_card(cv, px + i * (cw + gap), cy, cw, detail, height=h)
-    return cy + h + PANEL_PAD - y
-
-
-def dialogue_panel(cv, x, y, w, episode):
-    """The chat in two columns, agent questions on the left and simulated user answers on the right, each bubble
-    starting at the vertical midpoint of the one before it (or just under the last bubble of its own column)."""
-    px, py, pw = x + PANEL_PAD, y + TITLE_PAD, w - 2 * PANEL_PAD
-    cy = py + header(cv, px, py, 3, "Clarification") + 0.06
-    bw = 0.49 * pw
-    columns = {"agent_question": (px, AGENT_BG, "left"), "user_answer": (px + pw - bw, USER_BG, "right")}
-    bottoms = {role: cy for role in columns}  # the last bubble's bottom per column
-    prev_top, prev_h, end, q = cy, 0.0, cy, 0
-    for turn in episode["turns"]:
-        role = turn["role"]
-        if role not in columns:
-            continue
-        if role == "agent_question":
-            q += 1
-        bx, bg, side = columns[role]
-        top = max(prev_top + prev_h / 2, bottoms[role] + 0.1) + 0.17  # 0.17 for the tag above the bubble
-        tag = f"Agent question {q}" if role == "agent_question" else f"Simulated user answer {q}"
-        h = paragraph(cv, bx, top, bw, turn["text"], bg, tail=side, tag=tag, tag_side=side)
-        bottoms[role] = top + h
-        prev_top, prev_h, end = top, h, max(end, top + h)
-    if q == 0:
-        cv.text(px, cy + 0.25, "The agent asks no questions.", FONT, MUTED)
-        end = cy + 0.5
-    return end + PANEL_PAD - y
+    if fits(text):
+        return text
+    words = text.split()
+    lo, hi = 0, len(words)
+    while hi - lo > 1:
+        mid = (lo + hi) // 2
+        if fits(" ".join(words[:mid]) + " …"):
+            lo = mid
+        else:
+            hi = mid
+    return " ".join(words[:lo]).rstrip(",;.") + " …"
 
 
 def truncated(text, max_words):
@@ -305,46 +183,173 @@ def truncated(text, max_words):
     return cut.rstrip(",;.") + " …"
 
 
+def header(cv, x, y, number, title, size=TITLE_SIZE):
+    """Panel title, numbered in a dark disc when a number is given, the disc scaled with the title size."""
+    r = 0.0085 * size
+    if number is not None:
+        cv.circle(x + r, y + r, r, INK)
+        cv.text(x + r, y + r + 0.004, str(number), 0.66 * size, "white", ha="center", weight="bold")
+        x += 2 * r + 0.11
+    cv.text(x, y + r, title.upper(), size, INK, weight="bold")
+    return 2 * r
+
+
+def detail_label(detail):
+    return f"({detail['category']}, {detail['importance']:.1f})"
+
+
+def detail_card(cv, x, y, w, detail):
+    """A dashed one-line card: the detail's text, then its category and importance weight in muted type."""
+    h = line_height(FONT) + 2 * PAD
+    cv.box(x, y, w, h, "white", LINE, dashed=True)
+    cv.text(x + PAD, y + h / 2, detail["text"], FONT, INK)
+    cv.text(x + PAD + cv.measure(detail["text"], FONT) + LABEL_GAP, y + h / 2, detail_label(detail), FONT, MUTED)
+
+
+def check_row(cv, x, y, w, text, delivered, height=None):
+    """The judge's check question after a tick or a cross, the box edged in the verdict's color, its text centered
+    in the given height when set so that the checks of one row line up."""
+    color, glyph = (DELIVERED, "✓") if delivered else (MISSED, "✗")
+    lead = PAD + cv.measure(glyph, FONT, "bold") + 0.07
+    lines = cv.wrap(text, w - lead - PAD, FONT)
+    step = line_height(FONT)
+    h = height or len(lines) * step + 2 * CHECK_PAD
+    top = y + (h - len(lines) * step) / 2
+    cv.box(x, y, w, h, "white", color)
+    cv.text(x + PAD, top + 0.5 * step, glyph, FONT, color, weight="bold")
+    for i, line in enumerate(lines):
+        cv.text(x + lead, top + (i + 0.5) * step, line, FONT, INK)
+    return h
+
+
+def runs_width(cv, runs):
+    """runs: [(text, size, weight, color, gap_after)], the trailing gap not counted."""
+    return sum(cv.measure(text, size, weight) + gap for text, size, weight, _, gap in runs) - runs[-1][4]
+
+
+def draw_runs(cv, x, y, runs):
+    for text, size, weight, color, gap in runs:
+        cv.text(x, y, text, size, color, weight=weight)
+        x += cv.measure(text, size, weight) + gap
+
+
+def utility_box(cv, x, y, w, u_rec):
+    """Utility recovered under both weightings in one soft box: the label at the left, the two values with their
+    weighting notes stacked and centered beside it."""
+    groups = [[(f"{u_rec['equal']:.2f}", UTILITY_SIZE, "bold", INK, 0.06),
+               ("(details weighed equally)", TINY, "normal", MUTED, 0.12)],
+              [(f"{u_rec['llm']:.2f}", UTILITY_SIZE, "bold", INK, 0.06),
+               ("(details weighed by LLM-assigned importance)", TINY, "normal", MUTED, 0.0)]]
+    left = x + UTILITY_INSET + cv.measure("UTILITY RECOVERED", UTILITY_SIZE, "bold") + 0.3
+    right = x + w - UTILITY_INSET
+    block = max(runs_width(cv, group) for group in groups)
+    h = 0.58
+    cv.box(x, y, w, h, CAPTION_BG, LINE)
+    cv.text(x + UTILITY_INSET, y + h / 2, "UTILITY RECOVERED", UTILITY_SIZE, INK, weight="bold")
+    for i, group in enumerate(groups):
+        draw_runs(cv, left + (right - left - block) / 2, y + h / 2 + (i - 0.5) * 0.22, group)
+    return h
+
+
+# Panels: each lays out its content from the panel's top-left corner and returns the panel height
+
+
+def image_text_panel(cv, x, y, w, number, title, image, text, bg):
+    """A title, then an image card beside a text box, the text cut to the image's height and centered on it."""
+    px, py, pw = x + PANEL_PAD, y + TITLE_PAD, w - 2 * PANEL_PAD
+    hh = header(cv, px, py, number, title) + HEADER_GAP
+    frame = 0.035 * CARD_SIDE  # the card frame reaches this far outside the card
+    image_h = CARD_SIDE + 2 * frame
+    tx, tw = px + CARD_SIDE + 0.3, pw - CARD_SIDE - 0.3
+    text = fitted(cv, text, tw, image_h)
+    text_h = paragraph(cv.scratch(), tx, 0, tw, text, bg)
+    cv.image(px, py + hh + frame, CARD_SIDE, image)
+    paragraph(cv, tx, py + hh + (image_h - text_h) / 2, tw, text, bg)
+    return TITLE_PAD + hh + image_h + PANEL_PAD
+
+
+def redacted_panel(cv, x, y, w, redacted):
+    """The redacted details as dashed one-line cards over the fewest rows that hold them, spread by text width with
+    the widest first, each row stretched to the panel width with its cards in instance order."""
+    px, py, pw = x + PANEL_PAD, y + TITLE_PAD, w - 2 * PANEL_PAD
+    n = len(redacted)
+    cy = py + header(cv, px, py, None, "Redacted details", SUBTITLE_SIZE) + HEADER_GAP
+    gap = 0.12
+    text_w = [cv.measure(d["text"], FONT) + 2 * PAD + 0.02 for d in redacted]  # the packing follows the texts alone
+    widths = [cv.measure(d["text"], FONT) + LABEL_GAP + cv.measure(detail_label(d), FONT) + 2 * PAD + 0.02
+              for d in redacted]
+    n_rows = max(1, math.ceil((sum(text_w) + gap * n) / (pw + gap)))
+    while True:  # more rows until every row holds its cards on one line (or every card is alone)
+        rows, totals = [[] for _ in range(n_rows)], [0.0] * n_rows
+        for i in sorted(range(n), key=lambda i: -text_w[i]):  # widest first into the emptiest row
+            r = totals.index(min(totals))
+            rows[r].append(i)
+            totals[r] += text_w[i]
+        rows = [row for row in rows if row]
+        if n_rows >= n or all(sum(widths[i] for i in row) + gap * (len(row) - 1) <= pw for row in rows):
+            break
+        n_rows += 1
+    h = line_height(FONT) + 2 * PAD
+    for row in rows:
+        row.sort()
+        scale = (pw - gap * (len(row) - 1)) / sum(widths[i] for i in row)
+        cx = px
+        for i in row:
+            detail_card(cv, cx, cy, widths[i] * scale, redacted[i])
+            cx += widths[i] * scale + gap
+        cy += h + gap
+    return cy - gap + PANEL_PAD - y
+
+
+def dialogue_panel(cv, x, y, w, episode):
+    """The chat in two columns, agent questions on the left and user answers on the right, each answer starting level
+    with its question and each question under the lower of the two before it."""
+    px, py, pw = x + PANEL_PAD, y + TITLE_PAD, w - 2 * PANEL_PAD
+    cy = py + header(cv, px, py, 3, "Clarification") + 0.06
+    usable = 0.98 * pw  # the rest is the gap between the columns
+    qw, aw = QUESTION_SHARE * usable, (1 - QUESTION_SHARE) * usable
+    columns = {"agent_question": (px, qw, AGENT_BG, "left"), "user_answer": (px + pw - aw, aw, USER_BG, "right")}
+    top = end = cy
+    q = 0
+    for turn in episode["turns"]:
+        role = turn["role"]
+        if role not in columns:
+            continue
+        if role == "agent_question":
+            q += 1
+            top = end + 0.06 + 0.17  # 0.17 for the tag above the bubble
+        bx, bw, bg, side = columns[role]
+        tag = f"AGENT QUESTION {q}" if role == "agent_question" else f"USER ANSWER {q}"
+        end = max(end, top + paragraph(cv, bx, top, bw, turn["text"], bg, side, tag))
+    if q == 0:
+        cv.text(px, cy + 0.25, "The agent asks no questions.", FONT, MUTED)
+        end = cy + 0.5
+    return end + PANEL_PAD - y
+
+
 def judge_panel(cv, x, y, w, redacted, judgment, height=None):
-    """The check rows bunched together, then the utility box, the spare room split equally between the three gaps
-    (under the title, between the checks and the utility box, and under it) when the panel's height is given."""
+    """The checks in CHECK_COLUMNS columns, the tallest first so that checks of one height share a row, each row as
+    tall as its tallest check, the spare room split between the gaps under the title and under the checks when the
+    panel's height is given."""
     px, py, pw = x + PANEL_PAD, y + TITLE_PAD, w - 2 * PANEL_PAD
     hh = header(cv, px, py, 5, "Judge")
     verdicts = [(d["check"], bool(judgment["per_detail"].get(str(d["id"]), {}).get("delivered"))) for d in redacted]
-    checks_h = sum(check_row(cv.scratch(), px, 0, pw, text, ok) for text, ok in verdicts) + 0.08 * (len(verdicts) - 1)
-    box_h = utility_box(cv.scratch(), px, 0, pw, judgment["u_rec"])
-    fixed = TITLE_PAD + hh + checks_h + box_h
-    gap = max(0.16, (height - fixed) / 3) if height else 0.16
+    col_gap = 0.14
+    cw = (pw - col_gap * (CHECK_COLUMNS - 1)) / CHECK_COLUMNS
+    heights = [check_row(cv.scratch(), px, 0, cw, text, ok) for text, ok in verdicts]
+    order = sorted(range(len(verdicts)), key=lambda i: -heights[i])  # stable, equal heights keep the instance order
+    rows = [order[j:j + CHECK_COLUMNS] for j in range(0, len(order), CHECK_COLUMNS)]
+    row_heights = [max(heights[i] for i in row) for row in rows]
+    checks_h = sum(row_heights) + 0.06 * (len(rows) - 1)
+    fixed = TITLE_PAD + hh + checks_h
+    gap = max(0.12, (height - fixed) / 2) if height else 0.12
     cy = py + hh + gap
-    for text, ok in verdicts:
-        cy += check_row(cv, px, cy, pw, text, ok) + 0.08
-    cy += gap - 0.08
-    cy += utility_box(cv, px, cy, pw, judgment["u_rec"])
-    return cy + gap - y
-
-
-def bisect(predicate, lo, hi, tol=0.01):
-    """The smallest value in [lo, hi] where the monotone predicate turns true (hi when it never does)."""
-    if predicate(lo):
-        return lo
-    while hi - lo > tol:
-        mid = (lo + hi) / 2
-        if predicate(mid):
-            hi = mid
-        else:
-            lo = mid
-    return hi
-
-
-def balance(pair, lo, hi):
-    """The split in [lo, hi] at which the two panel heights pair(split) come closest, the first minus the second
-    decreasing in the split (dry runs on scratch canvases)."""
-    def gap(split):
-        first, second = pair(split)
-        return first - second
-
-    split = bisect(lambda s: gap(s) <= 0, lo, hi)
-    return min((split, max(lo, split - 0.02)), key=lambda s: abs(gap(s)))
+    for row, rh in zip(rows, row_heights):
+        for j, i in enumerate(row):
+            check_row(cv, px + j * (cw + col_gap), cy, cw, *verdicts[i], height=rh)
+        cy += rh + 0.06
+    cy += gap - 0.06
+    return cy - y
 
 
 def experiment_name(config):
@@ -356,28 +361,15 @@ def visualize(instance, episode, judgment, images, out_base, max_words):
     """images: reference, request and agent, any of them None when missing."""
     details = {d["id"]: d for d in instance["details"]}
     redacted = [details[i] for i in instance["redacted_ids"]]
-    intent = partial(image_text_panel, number=1, title="Ground truth", image=images["reference"],
-                     text=instance["full_spec"], bg=CAPTION_BG)
-    request = partial(image_text_panel, number=2, title="User request", image=images["request"],
-                      text=instance["eroded_prompt"], bg=USER_BG)
-    output = partial(image_text_panel, number=4, title="Agent output", image=images["agent"],
-                     text=truncated(episode["final_output"], max_words), bg=AGENT_BG, tail="right")
-    judge = partial(judge_panel, redacted=redacted, judgment=judgment)
-
     cv = Canvas(FIG_W)
     x0, inner_w = MARGIN, FIG_W - 2 * MARGIN
     y = MARGIN
 
-    # the instance as one panel: ground truth and request side by side, their split searched so that the two come
-    # out the same height, the redacted details under both
-    def top(w2):
-        return (request(cv.scratch(), x0 + inner_w - w2, y, w2), intent(cv.scratch(), x0, y, inner_w - w2))
-
-    w2 = balance(top, 0.36 * inner_w, 0.6 * inner_w)
-    w1 = inner_w - w2
-    row = max(top(w2))
-    intent(cv, x0, y, w1, height=row)
-    request(cv, x0 + w1, y, w2, height=row)
+    # the instance as one panel: ground truth and request side by side, the redacted details under both
+    w1 = TOP_SPLIT * inner_w
+    row = image_text_panel(cv, x0, y, w1, 1, "Ground truth", images["reference"], instance["full_spec"], CAPTION_BG)
+    image_text_panel(cv, x0 + w1, y, inner_w - w1, 2, "User request", images["request"], instance["eroded_prompt"],
+                     USER_BG)
     overlap = PANEL_PAD - 0.04  # the redacted details start inside the row's bottom padding
     hr = redacted_panel(cv, x0, y + row - overlap, inner_w, redacted)
     cv.box(x0, y, inner_w, row + hr - overlap, "white", LINE, radius=0.14, zorder=0.5)
@@ -389,24 +381,24 @@ def visualize(instance, episode, judgment, images, out_base, max_words):
     cv.box(x0, y, inner_w, h3, "white", LINE, radius=0.14, zorder=0.5)
     y += h3 + GAP
 
-    # output beside judge, their split searched the same way, the judge never narrower than its utility box needs
-    def bottom(w4):
-        return (output(cv.scratch(), x0, y, w4), judge(cv.scratch(), x0 + w4 + GAP, y, inner_w - w4 - GAP))
-
-    hi = inner_w - GAP - utility_min_width(cv, judgment["u_rec"]) - 2 * PANEL_PAD
-    w4 = balance(bottom, min(0.47 * inner_w, hi), hi)
+    # the output panel with the utility box under it, the judge's checks beside them stretched to end level with the
+    # utility box, the verdicts feeding it through the second arrow
+    w4 = OUTPUT_SHARE * inner_w
     w5 = inner_w - w4 - GAP
     x4, x5 = x0, x0 + w4 + GAP
     cv.arrow(x4 + w4 / 2, y - GAP + 0.06, x4 + w4 / 2, y - 0.06)
-    row = max(bottom(w4))
-    output(cv, x4, y, w4, height=row)
-    judge(cv, x5, y, w5, height=row)
-    cv.box(x4, y, w4, row, "white", LINE, radius=0.14, zorder=0.5)
+    ho = image_text_panel(cv, x4, y, w4, 4, "Agent output", images["agent"], truncated(episode["final_output"], max_words),
+                          AGENT_BG)
+    ub = utility_box(cv.scratch(), x4, 0, w4, judgment["u_rec"])
+    row = max(judge_panel(cv.scratch(), x5, y, w5, redacted, judgment), ho + UTILITY_GAP + ub)
+    judge_panel(cv, x5, y, w5, redacted, judgment, height=row)
+    cv.box(x4, y, w4, ho, "white", LINE, radius=0.14, zorder=0.5)
     cv.box(x5, y, w5, row, "white", LINE, radius=0.14, zorder=0.5)
-    cv.arrow(x4 + w4 + 0.06, y + row / 2, x5 - 0.06, y + row / 2)
-    y += row
-
-    cv.render(out_base, y + MARGIN)
+    uy = y + row - ub
+    utility_box(cv, x4, uy, w4, judgment["u_rec"])
+    cv.arrow(x4 + w4 + 0.06, y + ho / 2, x5 - 0.06, y + ho / 2)
+    cv.arrow(x5 - 0.06, uy + ub / 2, x4 + w4 + 0.06, uy + ub / 2)
+    cv.render(out_base, y + row + MARGIN)
     print(f"saved {out_base}.png")
 
 
