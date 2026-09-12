@@ -47,31 +47,23 @@ GEMINI_API_KEY="<YOUR_GEMINI_KEY>"
 TINKER_API_KEY="<YOUR_TINKER_KEY>"
 ```
 
-Finally, download and normalize the DOCCI descriptions:
-
-```bash
-python scripts/setup_docci.py
-```
-
 > [!NOTE]
-> All commands run from the repository root.
+> All commands run from the repository root. The instances of the paper ship in `data/docci_instances/` and its 15 evaluations in `paper_results/`, and every command uses them by default.
 
 ## Synthesis
 
-Decompose each description into atomic details with an importance weight and a check, redact some of them, and rewrite what remains as a natural user request.
+Decompose each description into atomic details with an importance weight and a check, redact some of them, and rewrite what remains as a natural user request. Skip this step to use the paper's instances. Otherwise download the DOCCI descriptions and build your own:
 
 ```bash
-python -m uaug.synthesis.run \
-  synthesis=variable-redactions \
-  general.k=15
+python scripts/setup_docci.py
+python -m uaug.synthesis.run
 ```
 
 **Options:**
 - `synthesis`: variable-redactions (1 to `k` details per instance), fixed-redactions (exactly `k`)
 - `general.k`: maximum (or fixed) number of redacted details (default: 15)
 - `synthesis.num_sources`: number of sources to process (null for all)
-- `llm`: gemini-3.5-flash-lite, gemini-3.7-flash
-- `general.max_workers`: number of parallel workers (default: 256)
+- `llm`: gemini-3.5-flash-lite, gemini-3.8-flash
 
 Results are saved in `results/image-gen/docci/synthesis/LLM/k_REDACTIONS/TIMESTAMP`, with `instances.{train,val,test}.jsonl` and a `synthesis_report.json`.
 
@@ -82,17 +74,15 @@ Each iteration samples instances, collects a group of rollouts per instance agai
 ```bash
 python -m uaug.training.run \
   agent=fixed-asking \
-  user=patient \
-  training.instances_dir=results/image-gen/docci/synthesis/LLM/k_dyn15/TIMESTAMP
+  user=patient
 ```
 
 **Options:**
 - `agent`: fixed-asking (one question per hidden detail), open-asking (the model decides when to stop)
 - `user`: patient (answers every question), impatient (stops after a random number of them)
 - `model`: qwen3-8b, qwen3.5-9b
-- `training.n_iterations`: number of iterations, one gradient step each (default: 400)
-- `training.resume_dir`: previous run directory to continue from its last checkpoint
-- `general.max_workers`: number of parallel workers (default: 256)
+- `training.instances_dir`: instances to train on (default: data/docci_instances)
+- `training.n_iterations`: number of iterations, one gradient step each (default: 300)
 
 Results are saved in `results/image-gen/docci/training/MODEL/AGENT/USER/k_15/REWARD/WEIGHTING/TIMESTAMP`, with the per-iteration `training_log.jsonl`, every judged rollout in `trajectories.jsonl`, and `checkpoints.jsonl` mapping steps to Tinker sampler paths.
 
@@ -105,57 +95,40 @@ python -m uaug.evaluation.run \
   agent=open-asking \
   user=impatient \
   evaluation.split=test \
-  model.checkpoint=tinker://CHECKPOINT \
-  evaluation.instances_dir=results/image-gen/docci/synthesis/LLM/k_dyn15/TIMESTAMP
+  model.checkpoint=tinker://CHECKPOINT
 ```
 
 **Options:**
 - `agent`: no-asking, fixed-asking, open-asking
 - `user`: patient, impatient
 - `evaluation.split`: val, test
-- `model.checkpoint`: Tinker sampler path from `checkpoints.jsonl` (null for the base weights)
-- `general.max_workers`: number of parallel workers (default: 256)
+- `evaluation.instances_dir`: instances to evaluate on (default: data/docci_instances)
+- `model.checkpoint`: Tinker sampler path from `checkpoints.jsonl` (omit for the base weights)
 
 Results are saved in `results/image-gen/docci/evaluation/MODEL/AGENT/USER/k_15/SPLIT/CHECKPOINT/TIMESTAMP`, with `episodes.jsonl`, `judgments.jsonl`, a one-row `summary.csv`, and recovery plots.
 
 ## Images & Figures
 
-Render images with Gemini for the reference, the request, and the final description of each episode:
+Render the reference, request and final images with Gemini:
 
 ```bash
 python scripts/setup_docci_images.py
-python scripts/generate_images_for_data.py SYNTHESIS_DIR --split test
-python scripts/generate_images_for_eval.py EVAL_DIR
+python scripts/generate_images_for_data.py --split test
+python scripts/generate_images_for_eval.py
 ```
 
-**Options:**
-- `--instances`: instance ids to render instead of the whole split or run
-- `--workers`: number of parallel workers (default: 64)
-
-Images are saved in `SYNTHESIS_DIR/images/` and `EVAL_DIR/images/`, and reruns only render what is missing.
-
-Figures of single episodes, image comparisons across runs, and examples with the model's reasoning:
+Make the figures of the paper from its evaluations (pass an evaluation directory to use another):
 
 ```bash
-python scripts/visualize_episode.py EVAL_DIR -n 5
-python scripts/visualize_instance.py INSTANCE_ID EVAL_DIR
-python scripts/visualize_images.py --naive EVAL_DIR --fixed EVAL_DIR --open EVAL_DIR
-python scripts/visualize_thinking.py EVAL_DIR --out DIR
+python scripts/visualize_images.py
+python scripts/visualize_instance.py INSTANCE_ID
 ```
+
+Figures are saved in `scripts/figures/`.
 
 ## Configuration
 
 The framework uses [Hydra](https://hydra.cc/) for configuration management. Take a look into `uaug/conf/` to see all the details and options.
-
-## Custom Tasks & Datasets
-
-Create `uaug/conf/task/your_task.yaml` with the detail categories and the decompose, erode, user, ask, final, decide and judge prompts, and run with `task=your_task`. For a new dataset, create `uaug/conf/dataset/your_dataset.yaml` pointing at a `sources.jsonl` with one `{source_id, full_spec}` per line, and run with `dataset=your_dataset`.
-
-## FAQs
-
-### Can I access the data, checkpoints and results from the experiments in the paper?
-
-Reach out to us!
 
 ## Citing & Acknowledgements
 
