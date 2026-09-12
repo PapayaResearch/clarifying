@@ -4,7 +4,7 @@ beside them. Images come from <synthesis_dir>/images/ (generate_images_for_data.
 (generate_images_for_eval.py), a card reads "missing" where one is absent.
 
 Usage:
-    python scripts/visualize_instance.py <instance_id> <eval_dir> [--max-words 150] [--out <dir>]
+    python scripts/visualize_instance.py <instance_id> [<eval_dir>] [--max-words 150] [--out <dir>]
 
 Writes <instance_id>_visual as png and pdf to --out or scripts/figures/k<k>_<agent>-<label>. The full description and
 the output are cut with an ellipsis to the height of their image (the output after --max-words first), the judge saw
@@ -14,18 +14,14 @@ import argparse
 import math
 import os
 
-import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
+from matplotlib.patches import Circle, FancyBboxPatch, Polygon
 
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-from matplotlib.font_manager import FontProperties  # noqa: E402
-from matplotlib.patches import Circle, FancyBboxPatch, Polygon  # noqa: E402
+from utils import AGENT_BG, CAPTION_BG, DELIVERED, EXAMPLE_RUN, FIGURES, INK, LINE, MISSED, USER_BG, draw_card, \
+    load_eval, load_image, run_label
 
-from visualize_images import SCRIPTS, draw_card, load_eval, load_image, run_label  # noqa: E402
-
-INK, MUTED, LINE = "#3c4043", "#5f6368", "#dadce0"
-CAPTION_BG, USER_BG, AGENT_BG = "#f8f9fa", "#f1f3f4", "#e8f0fe"
-DELIVERED, MISSED = "#188038", "#c5221f"
+MUTED = "#5f6368"  # a shade darker than the muted grey of the other figures
 
 # layout in inches
 FIG_W, MARGIN = 12.5, 0.4
@@ -370,7 +366,8 @@ def visualize(instance, episode, judgment, images, out_base, max_words):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("instance", help="instance id, e.g. test_00337.k3")
-    parser.add_argument("eval_dir", help="evaluation run holding the episode")
+    parser.add_argument("eval_dir", nargs="?", default=EXAMPLE_RUN,
+                        help="evaluation run holding the episode (default: the paper's patient-trained open-asking run under the patient user)")
     parser.add_argument("--max-words", type=int, default=150,
                         help="cut the final description after this many words (0 shows it whole)")
     parser.add_argument("--out", help="output directory")
@@ -389,7 +386,7 @@ def main():
         print(f"images missing for {args.instance}: {', '.join(missing)} "
               "(run scripts/generate_images_for_data.py and scripts/generate_images_for_eval.py first)")
     name = f"k{config['general']['k']}_{config['agent']['name']}-{run_label(config)}"
-    out_dir = args.out or os.path.join(SCRIPTS, "figures", name)
+    out_dir = args.out or os.path.join(FIGURES, name)
     os.makedirs(out_dir, exist_ok=True)
     visualize(instances[args.instance], episodes[args.instance], judgments[args.instance], images,
               os.path.join(out_dir, f"{args.instance}_visual"), args.max_words)

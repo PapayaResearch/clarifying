@@ -8,109 +8,34 @@ belongs in the caption. Under every image the number of details redacted or of q
 reads "missing" where one is absent.
 
 Usage:
-    python scripts/visualize_images.py --naive <eval_dir> --fixed <eval_dir> [--open <eval_dir>]
+    python scripts/visualize_images.py [--naive <eval_dir>] [--fixed <eval_dir>] [--open <eval_dir>]
         [-n 5] [--seed 42] [--instances <id> ...] [--out <dir>]
 
-The runs must share the instance set. Writes <instance_id>_figure and figure_all as png and pdf to --out or
+The runs default to the paper's under paper_results/ (the base weights and the patient-trained checkpoint under the
+patient user) and must share the instance set. Writes <instance_id>_figure and figure_all as png and pdf to --out or
 scripts/figures/k<k>[-thinking]_naive-<label>_fixed-<label>[_open-<label>].
 """
 import argparse
-import glob
-import json
 import os
 import random
 import textwrap
 
-import matplotlib
-import yaml
-from PIL import Image
+import matplotlib.pyplot as plt
 
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-from matplotlib.patches import FancyBboxPatch  # noqa: E402
+from utils import FIGURES, LINE, MUTED, draw_card, load_eval, load_image, paper_run, run_label
 
-plt.rcParams.update({"font.family": ["Roboto", "Segoe UI", "DejaVu Sans"], "pdf.fonttype": 42})
-
-SCRIPTS = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(SCRIPTS)
 CARD_SIDE, MARGIN, GAP = 2.44, 0.25, 0.52  # inches: card side, page margin, gap between rows
 DIVIDERS, DIVIDER_GAP, NARROW_GAP = 3, 0.36, 0.4  # divider lines in the first column gaps, half of such a gap, the rest
 TITLE_H, TOP, BOTTOM = 0.86, 0.12, 0.3
-MUTED, LINE, CARD, SUBTITLE = "#80868b", "#dadce0", "#f1f3f4", "#5f6368"
+SUBTITLE = "#5f6368"
 TITLE_FONT = ["Segoe UI", "Arial", "DejaVu Sans"]  # the installed Roboto has no italic face
 AGENTS = ["naive-asking", "fixed-asking", "open-asking"]  # the columns of --naive, --fixed and --open
 BASE_TITLE, TRAINED_TITLE = "Base Model", "Trained Model"  # the user a checkpoint was trained against stays in the caption
 MODES = {"fixed": "Fixed-Asking", "dynamic": "Open-Asking"}  # by the config's asking mode
 
 
-def read_jsonl(path):
-    with open(path, encoding="utf-8") as f:
-        return [json.loads(line) for line in f if line.strip()]
-
-
-def load_eval(eval_dir):
-    """(instances by id, episodes by id, judgments by id, config, synthesis directory) of one evaluation run."""
-    with open(os.path.join(eval_dir, "config.yaml"), encoding="utf-8") as f:
-        config = yaml.safe_load(f)
-    instances_dir = config["evaluation"]["instances_dir"]
-    if not os.path.isabs(instances_dir):
-        instances_dir = os.path.join(ROOT, instances_dir)
-    split = config["evaluation"]["split"]
-    instances = {r["instance_id"]: r for r in read_jsonl(os.path.join(instances_dir, f"instances.{split}.jsonl"))}
-    episodes = {r["instance_id"]: r for r in read_jsonl(os.path.join(eval_dir, "episodes.jsonl"))}
-    judgments = {r["instance_id"]: r for r in read_jsonl(os.path.join(eval_dir, "judgments.jsonl"))}
-    return instances, episodes, judgments, config, instances_dir
-
-
-def run_step(config):
-    """The checkpoint step of an evaluation run, or base (also used by scripts/utils/export_clip_dataset_csv.py)."""
-    checkpoint = config["model"].get("checkpoint")
-    return checkpoint.rsplit("step-", 1)[-1].lstrip("0") if checkpoint else "base"
-
-
-def run_label(config):
-    """base, else the user the checkpoint was trained against (patient, impatient) read from the training run that
-    holds it (training/<model>/<agent>/<user>/...), the step number when none does."""
-    checkpoint = config["model"].get("checkpoint")
-    if not checkpoint:
-        return "base"
-    root = os.path.join(ROOT, "results", config["task"]["name"], config["dataset"]["name"], "training")
-    for path in glob.glob(os.path.join(root, *["*"] * 7, "checkpoints.jsonl")):
-        if any(r.get("checkpoint") == checkpoint for r in read_jsonl(path)):
-            return path.replace("\\", "/").split("/")[-6]
-    return run_step(config)
-
-
-def load_image(path):
-    return Image.open(path).convert("RGB") if os.path.exists(path) else None
-
-
 def plural(n, noun):
     return f"{n} {noun}{'' if n == 1 else 's'}"
-
-
-def squared(image):
-    """The image letterboxed on white to a square."""
-    w, h = image.size
-    side = max(w, h)
-    canvas = Image.new("RGB", (side, side), "white")
-    canvas.paste(image, ((side - w) // 2, (side - h) // 2))
-    return canvas
-
-
-def draw_card(ax, image):
-    """The image inside a rounded card with a soft grey frame, "missing" when there is none."""
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1)
-    ax.set_aspect("equal")
-    ax.axis("off")
-    ax.add_patch(FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0.035,rounding_size=0.09", facecolor=CARD,
-                                edgecolor=LINE, linewidth=1.0, clip_on=False, zorder=1))
-    if image is None:
-        ax.text(0.5, 0.5, "missing", ha="center", va="center", fontsize=8, color=MUTED, zorder=3)
-        return
-    shown = ax.imshow(squared(image), extent=(0, 1, 0, 1), zorder=2)
-    shown.set_clip_path(FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0,rounding_size=0.07", transform=ax.transData))
 
 
 def render(titles, rows, out_base, caption=None):
@@ -151,9 +76,12 @@ def render(titles, rows, out_base, caption=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--naive", required=True, help="evaluation run of the base weights, either mode")
-    parser.add_argument("--fixed", required=True, help="evaluation run of a trained checkpoint in fixed-asking mode")
-    parser.add_argument("--open", help="the same in open-asking mode, the column is left out when absent")
+    parser.add_argument("--naive", default=paper_run("fixed-asking", "patient", "base_model"),
+                        help="evaluation run of the base weights, either mode (default: the paper's, fixed-asking under the patient user)")
+    parser.add_argument("--fixed", default=paper_run("fixed-asking", "patient", "patient_trained"),
+                        help="evaluation run of a trained checkpoint in fixed-asking mode (default: the paper's patient-trained run)")
+    parser.add_argument("--open", default=paper_run("open-asking", "patient", "patient_trained"),
+                        help="the same in open-asking mode (default: the paper's patient-trained run), pass '' to leave the column out")
     parser.add_argument("-n", type=int, default=5, help="number of random instances, ignored with --instances")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--instances", nargs="+", metavar="ID", help="instance ids to render, the rows in this order")
@@ -177,7 +105,7 @@ def main():
     labels = {key: run_label(cfg) for key, cfg in configs.items()}
     name = f"k{config['general']['k']}{'-thinking' if config['model'].get('thinking') else ''}_" + \
         "_".join(f"{key.split('-')[0]}-{labels[key]}" for key in eval_dirs)
-    out_dir = args.out or os.path.join(SCRIPTS, "figures", name)
+    out_dir = args.out or os.path.join(FIGURES, name)
     os.makedirs(out_dir, exist_ok=True)
     data_images = os.path.join(instances_dir, "images")
     titles = [("Reference", ""), ("User Request", "")] + \
