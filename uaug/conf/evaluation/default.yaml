@@ -2,7 +2,7 @@
 _target_: uaug.evaluation.pipeline.EvaluationPipeline
 
 # Synthesis results directory holding instances.<split>.jsonl
-instances_dir: ???
+instances_dir: ${dataset.instances_dir}
 # Which split to run on ("val" or "test")
 split: val
 # Seed for the user simulator's budget draws

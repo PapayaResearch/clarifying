@@ -64,6 +64,7 @@ class Logging:
 class Dataset:
     name: str
     sources_path: str
+    instances_dir: str
 
 
 ##############################

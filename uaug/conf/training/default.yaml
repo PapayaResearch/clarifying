@@ -7,7 +7,7 @@ defaults:
 _target_: uaug.training.pipeline.TrainingPipeline
 
 # Synthesis results directory holding instances.<split>.jsonl
-instances_dir: ???
+instances_dir: ${dataset.instances_dir}
 # Previous training run directory to resume from its last state checkpoint (null = fresh run)
 resume_dir: null
 # Which split to train on
