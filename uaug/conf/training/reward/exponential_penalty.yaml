@@ -1,8 +1,0 @@
-# Hydra target class
-_target_: uaug.training.rewards.ExponentialPenaltyReward
-# Display name
-name: exponential_penalty
-# Cost of the first question (question t costs question_cost * growth^t)
-question_cost: 0.02
-# Multiplicative growth of the per-question cost
-growth: 1.5

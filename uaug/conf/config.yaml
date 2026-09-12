@@ -9,7 +9,7 @@ defaults:
   - evaluation: default
   # Orchestration LLM (e.g., gemini-3.5-flash-lite, gemini-3.7-flash)
   - llm: gemini-3.5-flash-lite
-  # Model under test (e.g., qwen3-8b, nemotron3.5l-30b, gptoss-20b)
+  # Model under test (e.g., qwen3-8b, qwen3.5-9b)
   - model: qwen3-8b
   # Dataset used (e.g., docci)
   - dataset: docci
@@ -17,7 +17,7 @@ defaults:
   - task: image-gen
   # Redaction scheme (e.g., fixed-redactions, variable-redactions)
   - synthesis: variable-redactions
-  # Evaluation agent (e.g., no-asking, constant-asking, fixed-asking, open-asking)
+  # Evaluation agent (e.g., no-asking, fixed-asking, open-asking)
   - agent: fixed-asking
   # User simulator (e.g., patient, impatient)
   - user: patient
