@@ -98,8 +98,7 @@ class Agent:
     ask_prompt: str
     final_prompt: str
     decide_prompt: str
-    k_multiplier: Optional[int] = None
-    max_questions: Optional[int] = None
+    k_multiplier: int
 
 
 @dataclass
@@ -157,8 +156,7 @@ class Training:
     instances_dir: str
     split: str
     mode: str
-    k_multiplier: Optional[int]
-    max_questions: Optional[int]
+    k_multiplier: int
     importance_weighting: str
     resume_dir: Optional[str]
     n_iterations: int
