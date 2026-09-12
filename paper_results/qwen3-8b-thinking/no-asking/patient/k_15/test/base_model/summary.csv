@@ -1,0 +1,2 @@
+agent,mode,user,split,n_episodes,u_rec_llm_mean,u_rec_equal_mean,clairvoyant_llm_mean,clairvoyant_equal_mean,n_questions_mean,budget_mean,planning_gap_mean
+no-asking,fixed,patient,test,78,0.155,0.148,0.0,0.0,0,0,-8.55
