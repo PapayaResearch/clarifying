@@ -1,0 +1,38 @@
+{
+  "n_sources": 2000,
+  "n_instances": 479,
+  "outcomes": {
+    "too_few_details": 1521,
+    "ok": 479
+  },
+  "redacted_category_counts": {
+    "attribute": 1437,
+    "entity": 1162,
+    "style": 223,
+    "relation": 719,
+    "layout": 156,
+    "count": 94
+  },
+  "redacted_count_distribution": {
+    "1": 33,
+    "2": 35,
+    "3": 24,
+    "4": 38,
+    "5": 39,
+    "6": 35,
+    "7": 23,
+    "8": 38,
+    "9": 29,
+    "10": 31,
+    "11": 26,
+    "12": 32,
+    "13": 25,
+    "14": 37,
+    "15": 34
+  },
+  "per_split": {
+    "train": 290,
+    "val": 111,
+    "test": 78
+  }
+}
