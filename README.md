@@ -34,7 +34,8 @@ conda activate uaug
 install the dependencies:
 
 ```bash
-pip install -e .
+pip install uv
+uv pip install -e .
 ```
 
 and create a `.env` file in the project root with your API keys:
