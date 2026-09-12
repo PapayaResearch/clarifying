@@ -1,23 +1,28 @@
-# UAUG
+# Learning to Clarify Underspecified Intents Under Limited Interaction
 
-## Overview
+![Python version](https://img.shields.io/badge/python-3.12-blue)
+![Package version](https://img.shields.io/badge/version-0.1.0-green)
+![GitHub license](https://img.shields.io/github/license/PapayaResearch/uaug)
 
-**The User-Agent Utility Gap**: measuring, and training agents to close, the gap between what users want and what agents deliver. Hyper-detailed image descriptions are redacted, an agent recovers the missing details by asking a simulated user clarifying questions, a rubric judge scores each detail, and RL trains the agent to ask better.
+> [!NOTE]
+> Code for the paper **Learning to Clarify Underspecified Intents Under Limited Interaction**.
 
-The pipeline consists of the following stages:
+AI assistants receive requests that leave out information needed for a good outcome, for example about users' preferences or goals. They must then either speculate or ask for more information before proceeding. We reconceptualize this as a value-of-information problem: the assistant should acquire information whose absence causes the greatest avoidable loss in user utility. This is rarely known *ex ante*; rather, assistants must *predict* it in order to optimally allocate limited user interactions. We instantiate this problem in image generation and derive a reinforcement learning framework using multi-turn simulated users to maximize utility recovery under uncertainty. In a preregistered study with 456 interactive sessions across 76 human participants, this helped users significantly better match reference images with significantly fewer questions, less total interaction time, and lower cost. This points toward a simple and scalable framework for training language model assistants to better disambiguate user intent by asking more informative questions.
 
-1. **Synthesis**: Turn full descriptions into redacted task instances
-2. **Training**: RL fine-tune the asking policy with LoRA via the Tinker API
-3. **Evaluation**: Run agents against the simulated user and judge per-detail recovery
+<img width="1858" alt="banner" src="assets/main_figure.png" />
+
+## Features
+
+- 🧩 Instance synthesis from hyper-detailed image descriptions (DOCCI): decompose into atomic details, redact a fixed or variable number of them, and rewrite the rest as a natural request
+- 🗣️ Privileged user simulators that answer only what is asked, with patient and impatient stopping behavior
+- 🎯 Asking modes: no-asking, fixed-asking, and open-asking
+- 🏋️ RL fine-tuning of the asking policy with group-centered policy gradients and LoRA through the Tinker API
+- ⚖️ Rubric judge scoring the recovered utility per hidden detail
+- 🖼️ Image generation for references, requests, and final descriptions with Gemini
+- 🤖 Support for multiple orchestration LLMs through LiteLLM and base models through Tinker
+- ⚙️ Hydra-based configuration system for reproducible experiments
 
 ## Installation
-
-Clone the repo:
-
-```bash
-git clone https://github.com/PapayaResearch/uaug.git
-cd uaug
-```
 
 Create a Python environment:
 
@@ -29,123 +34,106 @@ conda activate uaug
 install the dependencies:
 
 ```bash
-pip install -e ".[train]"
+pip install -e .
 ```
 
 and create a `.env` file in the project root with your API keys:
 
 > [!IMPORTANT]
-> You must include a Gemini key (the environment LLM) and a Tinker key (the conversation model and RL training).
+> You must include a Gemini key (the environment LLM and image generation) and a Tinker key (the assistant model and RL training).
 
 ```bash
 GEMINI_API_KEY="<YOUR_GEMINI_KEY>"
 TINKER_API_KEY="<YOUR_TINKER_KEY>"
 ```
 
-Finally, download and normalize the DOCCI descriptions:
-
-```bash
-python scripts/setup_docci.py --limit 500
-```
-
 > [!NOTE]
-> Every command below runs from the repo root. `data/`, `results/` and `logs/` are resolved against the working directory.
+> All commands run from the repository root. The instances of the paper ship in `data/docci_instances/` and its 15 evaluations in `paper_results/`, and every command uses them by default.
 
-## 1. Synthesis
-Decompose each description into atomic details, redact some of them (importance-weighted), and erode the description into a natural user request by removing the redacted details and rewriting what remains. The redaction scheme sets how many: `fixed-redactions` redacts exactly `k` per instance, `variable-redactions` draws a count per instance uniformly from 1 to a maximum.
+## Synthesis
 
-### Run
+Decompose each description into atomic details with an importance weight and a check, redact some of them, and rewrite what remains as a natural user request. Skip this step to use the paper's instances. Otherwise download the DOCCI descriptions and build your own:
+
 ```bash
-python -m uaug.synthesis.run synthesis=<fixed-redactions|variable-redactions>
+python scripts/setup_docci.py
+python -m uaug.synthesis.run
 ```
 
-### Options
-- `synthesis`: Redaction scheme (`fixed-redactions` | `variable-redactions`)
-- `general.k`: Details redacted per instance, or the upper end of the per-instance count
-- `synthesis.min_details`: Drop sources whose decomposition yields fewer details
-- `synthesis.num_sources`: Number of sources to process
-- `synthesis.split_fractions`: Train, val and test shares, split by source
-- `synthesis.resume` / `synthesis.resume_path`: Resume a previous synthesis run
-- `llm`: Environment LLM used to decompose and erode
+**Options:**
+- `synthesis`: variable-redactions (1 to `k` details per instance), fixed-redactions (exactly `k`)
+- `general.k`: maximum (or fixed) number of redacted details (default: 15)
+- `synthesis.num_sources`: number of sources to process (null for all)
+- `llm`: gemini-3.5-flash-lite, gemini-3.8-flash
 
-### Outputs
-```
-results/<task>/<dataset>/synthesis/<llm>/<k_<k>|k_dyn<max>>/<datetime>/
-├── instances.train.jsonl
-├── instances.val.jsonl
-├── instances.test.jsonl
-├── synthesis_report.json
-└── config.yaml
-```
+Results are saved in `results/image-gen/docci/synthesis/LLM/k_REDACTIONS/TIMESTAMP`, with `instances.{train,val,test}.jsonl` and a `synthesis_report.json`.
 
-**Synthesis report**: yields, drop reasons, category counts, and the distribution of redacted counts
+## Training
 
-## 2. Training
-Per iteration: sample instances, collect grouped rollouts (GRPO-style group-mean-centered advantages), judge them, and take one policy-gradient step on Tinker-managed LoRA weights. Rollouts mirror the selected agent, so a checkpoint is evaluated as exactly the agent it was trained as.
+Each iteration samples instances, collects a group of rollouts per instance against the user simulator, judges them, and takes one policy-gradient step on LoRA weights with group-centered advantages.
 
-### Run
 ```bash
 python -m uaug.training.run \
-  agent=<agent_name> \
-  training/reward=<reward_name> \
-  "training.instances_dir=<synthesis_dir>"
+  agent=fixed-asking \
+  user=patient
 ```
 
-### Options
-- `agent`: The agent to train as (`fixed-asking` | `open-asking`)
-- `agent.k_multiplier`: Question cap per episode as a multiple of the instance's redacted count
-- `user`: `patient` (answers every question up to the cap) | `impatient` (answers a random number of them, P(T ≤ t) = (t / cap)^shape)
-- `training/reward`, with `q` the questions asked: `terminal` (u_rec, questions free) | `constant_penalty` (u_rec − c·q) | `exponential_penalty` (question t costs c·g^t) | `discounted_penalty` (γ^q · u_rec)
-- `training.importance_weighting`: Which weighting the reward optimizes (`llm` | `equal`)
-- `training.n_iterations`: Total number of iterations, one gradient step each
-- `training.instances_per_iteration` / `training.group_size`: Rollout batch shape
-- `training.save_every`: Checkpoint interval
-- `training.resume_dir`: Previous run directory to continue from its last checkpoint
-- `training.trainer.lora_rank` / `training.trainer.learning_rate`: LoRA update knobs
+**Options:**
+- `agent`: fixed-asking (one question per hidden detail), open-asking (the model decides when to stop)
+- `user`: patient (answers every question), impatient (stops after a random number of them)
+- `model`: qwen3-8b, qwen3.5-9b
+- `training.instances_dir`: instances to train on (default: data/docci_instances)
+- `training.n_iterations`: number of iterations, one gradient step each (default: 300)
 
-### Outputs
-```
-results/<task>/<dataset>/training/<model>/<agent>/<user>/k_<k>/<reward>/<weighting>/<datetime>/
-├── training_log.jsonl
-├── trajectories.jsonl
-├── checkpoints.jsonl
-└── config.yaml
-```
+Results are saved in `results/image-gen/docci/training/MODEL/AGENT/USER/k_15/REWARD/WEIGHTING/TIMESTAMP`, with the per-iteration `training_log.jsonl`, every judged rollout in `trajectories.jsonl`, and `checkpoints.jsonl` mapping steps to Tinker sampler paths.
 
-**Training log**: per-iteration reward, u_rec (both weightings), question and budget means, sampled tokens per agent call and the truncation rate
+## Evaluation
 
-**Trajectories**: every judged rollout's transcript, judgment, reward, and advantage
+Run one assistant over a split and judge every episode: it sees only the request, asks questions per its asking mode, and composes a final description that the judge checks against each hidden detail.
 
-**Checkpoints**: steps mapped to Tinker sampler paths (for evaluation) and state paths (for resuming)
-
-## 3. Evaluation
-Run one agent over instances and judge every episode: the agent sees only the eroded request, asks questions per its mode, and commits a final description. The judge checks each redacted detail against it, giving the recovery metric `u_rec` under both weightings plus `clairvoyant`, the best possible u_rec at each episode's question count.
-
-### Run
 ```bash
 python -m uaug.evaluation.run \
-  agent=<agent_name> \
-  "evaluation.instances_dir=<synthesis_dir>"
+  agent=open-asking \
+  user=impatient \
+  evaluation.split=test \
+  model.checkpoint=tinker://CHECKPOINT
 ```
 
-### Options
-- `agent`: `no-asking` (no questions) | `fixed-asking` (always asks up to the cap) | `open-asking` (model decides when to stop) | `constant-asking` (a constant question count per episode)
-- `agent.k_multiplier`: Question cap per episode as a multiple of the instance's redacted count
-- `user`: `patient` | `impatient`, as in training
-- `general.k`: Match the instances' k
-- `evaluation.split`: `val` | `test`
-- `model.checkpoint`: Tinker sampler path from the training stage (`null` for base weights)
-- `general.max_workers`: Parallelization level
+**Options:**
+- `agent`: no-asking, fixed-asking, open-asking
+- `user`: patient, impatient
+- `evaluation.split`: val, test
+- `evaluation.instances_dir`: instances to evaluate on (default: data/docci_instances)
+- `model.checkpoint`: Tinker sampler path from `checkpoints.jsonl` (omit for the base weights)
 
-### Outputs
-```
-results/<task>/<dataset>/evaluation/<model>/<agent>/<user>/k_<k>/<split>/<base|checkpoint>/<datetime>/
-├── episodes.jsonl
-├── judgments.jsonl
-├── summary.csv
-├── u_rec_hist_<llm|equal>.png
-├── u_rec_by_questions_<llm|equal>.png
-└── config.yaml
+Results are saved in `results/image-gen/docci/evaluation/MODEL/AGENT/USER/k_15/SPLIT/CHECKPOINT/TIMESTAMP`, with `episodes.jsonl`, `judgments.jsonl`, a one-row `summary.csv`, and recovery plots.
+
+## Images & Figures
+
+Render the reference, request and final images with Gemini:
+
+```bash
+python scripts/setup_docci_images.py
+python scripts/generate_images_for_data.py --split test
+python scripts/generate_images_for_eval.py
 ```
 
-**Summary CSV**: one row per run (agent, mode, user, split, episodes, u_rec and clairvoyant means under both weightings, mean questions and budget)
+Make the figures of the paper from its evaluations (pass an evaluation directory to use another):
+
+```bash
+python scripts/visualize_images.py
+python scripts/visualize_instance.py INSTANCE_ID
+```
+
+Figures are saved in `scripts/figures/`.
+
+## Configuration
+
+The framework uses [Hydra](https://hydra.cc/) for configuration management. Take a look into `uaug/conf/` to see all the details and options.
+
+## Citing & Acknowledgements
+
+If you use this code in your research, please cite the following paper:
+
+```bibtex
+TEMPORARY: add bibtex here
+```

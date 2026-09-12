@@ -1,155 +1,66 @@
-"""Image comparisons for the paper, one row per instance: the DOCCI reference, then the images a text-to-image model
-made from the user request and from each agent's final output, the first three set apart by divider lines and the
-two fine-tuned askers side by side:
+"""The paper's image comparison, one row per instance:
 
-    [reference] || [user request] || [naive asker] || [fixed asker] ([open asker])
+    [reference] || [user request] || [base model] || [trained model] ([trained model, open-asking])
 
-Under each image the number of details redacted or of questions asked. Images are read from <synthesis_dir>/images/
-(generate_images_for_data.py) and <eval_dir>/images/ (generate_images_for_eval.py), a card reads "missing" where one
-is absent.
+Each assistant column is titled with its weights over the asking mode of its run, the user it was trained against
+belongs in the caption. Under every image the number of details redacted or of questions asked. Images come from
+<synthesis_dir>/images/ (generate_images_for_data.py) and <eval_dir>/images/ (generate_images_for_eval.py), a card
+reads "missing" where one is absent.
 
 Usage:
-    python scripts/visualize_images.py --naive <eval_dir> --fixed <eval_dir> [--open <eval_dir>]
+    python scripts/visualize_images.py [--naive <eval_dir>] [--fixed <eval_dir>] [--open <eval_dir>]
         [-n 5] [--seed 42] [--instances <id> ...] [--out <dir>]
 
-The runs must share the instance set. Output: <instance_id>_figure.png/.pdf per instance and figure_all.png/.pdf
-stacking them, in scripts/figures/k<k>[-thinking]_naive-<label>_fixed-<label>[_open-<label>]/ or --out.
+The runs default to the paper's under paper_results/ (the base weights and the patient-trained checkpoint under the
+patient user) and must share the instance set. Writes <instance_id>_figure and figure_all as png and pdf to --out or
+scripts/figures/k<k>[-thinking]_naive-<label>_fixed-<label>[_open-<label>].
 """
 import argparse
-import glob
-import json
 import os
 import random
 import textwrap
 
-import matplotlib
-import yaml
-from PIL import Image
+import matplotlib.pyplot as plt
 
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-from matplotlib.patches import FancyBboxPatch  # noqa: E402
+from utils import FIGURES, LINE, MUTED, draw_card, load_eval, load_image, paper_run, run_label
 
-plt.rcParams.update({"font.family": ["Roboto", "Segoe UI", "DejaVu Sans"], "pdf.fonttype": 42, "ps.fonttype": 42})
-
-SCRIPTS = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(SCRIPTS)
-CARD_SIDE, MARGIN, GAP = 2.44, 0.25, 0.52  # card side in inches, the gap between rows, the width follows the columns
-DIVIDERS = 3  # column gaps carrying a divider line: after the reference, the request and the naive asker
-DIVIDER_GAP = 0.36  # on each side of a divider line
-NARROW_GAP = 0.4  # between the fixed and the open asker
-TITLE_H, TOP, BOTTOM = 0.74, 0.12, 0.3
-MUTED, LINE, CARD, SUBTITLE = "#80868b", "#dadce0", "#f1f3f4", "#5f6368"
+CARD_SIDE, MARGIN, GAP = 2.44, 0.25, 0.52  # inches: card side, page margin, gap between rows
+DIVIDERS, DIVIDER_GAP, NARROW_GAP = 3, 0.36, 0.4  # divider lines in the first column gaps, half of such a gap, the rest
+TITLE_H, TOP, BOTTOM = 0.86, 0.12, 0.3
+SUBTITLE = "#5f6368"
 TITLE_FONT = ["Segoe UI", "Arial", "DejaVu Sans"]  # the installed Roboto has no italic face
-AGENTS = {"naive-asking": "Naive Asker", "fixed-asking": "Fixed Asker", "open-asking": "Open Asker"}  # column titles
-
-
-def read_jsonl(path):
-    with open(path, encoding="utf-8") as f:
-        return [json.loads(line) for line in f if line.strip()]
-
-
-def load_eval(eval_dir):
-    """(instances by id, episodes by id, judgments by id, config, synthesis directory) of one evaluation run."""
-    with open(os.path.join(eval_dir, "config.yaml"), encoding="utf-8") as f:
-        config = yaml.safe_load(f)
-    instances_dir = config["evaluation"]["instances_dir"]
-    if not os.path.isabs(instances_dir):
-        instances_dir = os.path.join(ROOT, instances_dir)
-    split = config["evaluation"]["split"]
-    instances = {r["instance_id"]: r for r in read_jsonl(os.path.join(instances_dir, f"instances.{split}.jsonl"))}
-    episodes = {r["instance_id"]: r for r in read_jsonl(os.path.join(eval_dir, "episodes.jsonl"))}
-    judgments = {r["instance_id"]: r for r in read_jsonl(os.path.join(eval_dir, "judgments.jsonl"))}
-    return instances, episodes, judgments, config, instances_dir
-
-
-def run_step(config):
-    """The checkpoint step of an evaluation run, or base."""
-    checkpoint = config["model"].get("checkpoint")
-    return checkpoint.rsplit("step-", 1)[-1].lstrip("0") if checkpoint else "base"
-
-
-def run_label(config):
-    """base for the base weights, else the user the checkpoint was trained against (patient, impatient), read from the
-    training run holding the checkpoint (training/<model>/<agent>/<user>/...), the step number when no run does."""
-    checkpoint = config["model"].get("checkpoint")
-    if not checkpoint:
-        return "base"
-    root = os.path.join(ROOT, "results", config["task"]["name"], config["dataset"]["name"], "training")
-    for path in glob.glob(os.path.join(root, *["*"] * 7, "checkpoints.jsonl")):
-        if any(r.get("checkpoint") == checkpoint for r in read_jsonl(path)):
-            return path.replace("\\", "/").split("/")[-6]
-    return run_step(config)
-
-
-def comparison_name(k, labels, thinking=False):
-    """k<k>[-thinking]_naive-<label>_fixed-<label>[_open-<label>] for the agents in labels (keyed like AGENTS, the
-    labels from run_label), the tag when the runs' model thinks."""
-    return f"k{k}{'-thinking' if thinking else ''}_" + \
-        "_".join(f"{key.split('-')[0]}-{labels[key]}" for key in AGENTS if key in labels)
-
-
-def agent_mode(config):
-    """The asking mode of an evaluation run named like the agents: fixed-asking or open-asking."""
-    return "fixed-asking" if config["evaluation"]["agent"]["mode"] == "fixed" else "open-asking"
-
-
-def load_image(path):
-    return Image.open(path).convert("RGB") if os.path.exists(path) else None
+AGENTS = ["naive-asking", "fixed-asking", "open-asking"]  # the columns of --naive, --fixed and --open
+BASE_TITLE, TRAINED_TITLE = "Base Model", "Trained Model"  # the user a checkpoint was trained against stays in the caption
+MODES = {"fixed": "Fixed-Asking", "dynamic": "Open-Asking"}  # by the config's asking mode
 
 
 def plural(n, noun):
     return f"{n} {noun}{'' if n == 1 else 's'}"
 
 
-def squared(image):
-    """The image letterboxed on white to a square, so every card has the same shape."""
-    w, h = image.size
-    if w == h:
-        return image
-    side = max(w, h)
-    canvas = Image.new("RGB", (side, side), "white")
-    canvas.paste(image, ((side - w) // 2, (side - h) // 2))
-    return canvas
-
-
-def draw_card(ax, image):
-    """The image inside a rounded card with a soft grey frame, "missing" when there is none."""
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1)
-    ax.set_aspect("equal")
-    ax.axis("off")
-    ax.add_patch(FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0.035,rounding_size=0.09", facecolor=CARD,
-                                edgecolor=LINE, linewidth=1.0, clip_on=False, zorder=1))
-    if image is None:
-        ax.text(0.5, 0.5, "missing", ha="center", va="center", fontsize=8, color=MUTED, zorder=3)
-        return
-    shown = ax.imshow(squared(image), extent=(0, 1, 0, 1), zorder=2)
-    shown.set_clip_path(FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0,rounding_size=0.07", transform=ax.transData))
-
-
-def render(rows, out_base, caption=None):
-    """Rows of (images, titles, subtitles) as cards, the first DIVIDERS column gaps carrying a divider line that spans
-    every row, an optional caption (a list of lines) under the last row. Writes png and pdf."""
+def render(titles, rows, out_base, caption=None):
+    """Columns titled (name, mode) over rows of (images, subtitles) as cards, the titles on the first row only, divider
+    lines in the first DIVIDERS column gaps, an optional caption (lines) under the last row. Writes png and pdf."""
     n, card = len(rows), CARD_SIDE
     xs = [MARGIN]
-    for k in range(len(rows[0][0]) - 1):
+    for k in range(len(titles) - 1):
         xs.append(xs[-1] + card + (2 * DIVIDER_GAP if k < DIVIDERS else NARROW_GAP))
     fig_w = xs[-1] + card + MARGIN
     caption_h = 0.16 * len(caption) + 0.5 if caption else 0.0
     fig_h = TOP + TITLE_H + n * card + (n - 1) * GAP + caption_h + BOTTOM
     fig = plt.figure(figsize=(fig_w, fig_h))
-    for i, (images, titles, subtitles) in enumerate(rows):
+    face = dict(ha="center", va="baseline", fontweight="bold", fontstyle="italic", fontfamily=TITLE_FONT)
+    for i, (images, subtitles) in enumerate(rows):
         y = fig_h - TOP - TITLE_H - i * (card + GAP) - card
-        for x, image, title, sub in zip(xs, images, titles, subtitles):
+        for x, image, (name, mode), sub in zip(xs, images, titles, subtitles):
             ax = fig.add_axes([x / fig_w, y / fig_h, card / fig_w, card / fig_h])
             draw_card(ax, image)
-            if title:
-                ax.set_title(title, fontsize=23, color="black", fontweight="bold", fontstyle="italic",
-                             fontfamily=TITLE_FONT, pad=22)
-            if sub:  # just under the frame, well clear of the next row
-                ax.text(0.5, -0.035 - 0.05 / card, sub, ha="center", va="top", fontsize=15, color=SUBTITLE,
-                        transform=ax.transAxes)
+            if i == 0:  # the name on a shared baseline, the mode just over the frame
+                ax.text(0.5, 1.035 + 0.42 / card, name, fontsize=23, color="black", transform=ax.transAxes, **face)
+                if mode:
+                    ax.text(0.5, 1.035 + 0.11 / card, mode, fontsize=17, color=SUBTITLE, transform=ax.transAxes, **face)
+            ax.text(0.5, -0.035 - 0.05 / card, sub, ha="center", va="top", fontsize=15, color=SUBTITLE,
+                    transform=ax.transAxes)
     for k in range(min(DIVIDERS, len(xs) - 1)):
         x = (xs[k] + card + DIVIDER_GAP) / fig_w
         fig.add_artist(plt.Line2D([x, x], [(BOTTOM + caption_h) / fig_h, (fig_h - TOP) / fig_h], color=LINE,
@@ -165,14 +76,16 @@ def render(rows, out_base, caption=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--naive", required=True, help="evaluation run of the untrained asker (base weights, either mode)")
-    parser.add_argument("--fixed", required=True, help="evaluation run of the trained fixed asker")
-    parser.add_argument("--open", help="evaluation run of the trained open asker (column left out when absent)")
-    parser.add_argument("-n", type=int, default=5, help="number of random instances (ignored with --instances)")
+    parser.add_argument("--naive", default=paper_run("fixed-asking", "patient", "base_model"),
+                        help="evaluation run of the base weights, either mode (default: the paper's, fixed-asking under the patient user)")
+    parser.add_argument("--fixed", default=paper_run("fixed-asking", "patient", "patient_trained"),
+                        help="evaluation run of a trained checkpoint in fixed-asking mode (default: the paper's patient-trained run)")
+    parser.add_argument("--open", default=paper_run("open-asking", "patient", "patient_trained"),
+                        help="the same in open-asking mode (default: the paper's patient-trained run), pass '' to leave the column out")
+    parser.add_argument("-n", type=int, default=5, help="number of random instances, ignored with --instances")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--instances", nargs="+", metavar="ID",
-                        help="instance ids to render instead of a random sample, rows follow this order")
-    parser.add_argument("--out", help="output directory (default scripts/figures/<comparison>)")
+    parser.add_argument("--instances", nargs="+", metavar="ID", help="instance ids to render, the rows in this order")
+    parser.add_argument("--out", help="output directory")
     args = parser.parse_args()
 
     eval_dirs = {key: path for key, path in zip(AGENTS, (args.naive, args.fixed, args.open)) if path}
@@ -181,19 +94,23 @@ def main():
     common = set.intersection(*(set(episodes) for _, episodes, _, _, _ in evals.values()))
     if not common:
         raise SystemExit("the evaluation runs share no instance, check that they use the same synthesis directory and split")
-    if args.instances:  # hand-picked instances, in the order given
+    if args.instances:
         missing = [i for i in args.instances if i not in common]
         if missing:
             raise SystemExit(f"not in every evaluation run: {', '.join(missing)}")
         chosen = args.instances
     else:
         chosen = random.Random(args.seed).sample(sorted(common), min(args.n, len(common)))
-    labels = {key: run_label(evals[key][3]) for key in eval_dirs}
-    out_dir = args.out or os.path.join(SCRIPTS, "figures",
-                                       comparison_name(config["general"]["k"], labels, config["model"].get("thinking", False)))
+    configs = {key: evals[key][3] for key in eval_dirs}
+    labels = {key: run_label(cfg) for key, cfg in configs.items()}
+    name = f"k{config['general']['k']}{'-thinking' if config['model'].get('thinking') else ''}_" + \
+        "_".join(f"{key.split('-')[0]}-{labels[key]}" for key in eval_dirs)
+    out_dir = args.out or os.path.join(FIGURES, name)
     os.makedirs(out_dir, exist_ok=True)
     data_images = os.path.join(instances_dir, "images")
-    titles = ["Reference", "User Request"] + [AGENTS[key] for key in eval_dirs]
+    titles = [("Reference", ""), ("User Request", "")] + \
+        [(BASE_TITLE if labels[key] == "base" else TRAINED_TITLE, MODES[cfg["evaluation"]["agent"]["mode"]])
+         for key, cfg in configs.items()]
 
     rows = []
     for instance_id in chosen:
@@ -207,12 +124,10 @@ def main():
         if any(image is None for image in images):
             print(f"images missing for {instance_id} (run scripts/generate_images_for_data.py and _for_eval.py first)")
         caption = textwrap.wrap(f"User request (eroded): {instances[instance_id]['eroded_prompt']}", 150 + 20 * len(evals))
-        render([(images, titles, subtitles)], os.path.join(out_dir, f"{instance_id}_figure"), caption)
+        render(titles, [(images, subtitles)], os.path.join(out_dir, f"{instance_id}_figure"), caption)
         rows.append((images, subtitles))
-
     if rows:
-        render([(images, titles if i == 0 else [""] * len(titles), subtitles) for i, (images, subtitles) in enumerate(rows)],
-               os.path.join(out_dir, "figure_all"))
+        render(titles, rows, os.path.join(out_dir, "figure_all"))
 
 
 if __name__ == "__main__":

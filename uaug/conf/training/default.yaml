@@ -7,22 +7,20 @@ defaults:
 _target_: uaug.training.pipeline.TrainingPipeline
 
 # Synthesis results directory holding instances.<split>.jsonl
-instances_dir: ???
+instances_dir: ${dataset.instances_dir}
 # Previous training run directory to resume from its last state checkpoint (null = fresh run)
 resume_dir: null
 # Which split to train on
 split: train
 # Fixed or dynamic mode
 mode: ${agent.mode}
-# Question cap per episode, as a multiple of the instance's redacted count (null for agents with an absolute cap)
-k_multiplier: ${oc.select:agent.k_multiplier,null}
-# Absolute question cap per episode (null for agents that scale the cap with the redacted count)
-max_questions: ${oc.select:agent.max_questions,null}
+# Question cap per episode, as a multiple of the instance's redacted count
+k_multiplier: ${agent.k_multiplier}
 # Which weighting the reward optimizes ("llm" or "equal")
 importance_weighting: equal
 
 # Number of training iterations
-n_iterations: 400
+n_iterations: 300
 # Instances sampled per iteration
 instances_per_iteration: 8
 # Rollouts per instance (GRPO-style group)

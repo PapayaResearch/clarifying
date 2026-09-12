@@ -5,34 +5,29 @@ and the image rendered from the eroded request alone (_request.jpg). The whole -
 names some. Existing files are reused. Run scripts/setup_docci_images.py once first for the reference images.
 
 Usage:
-    python scripts/generate_images_for_data.py <synthesis_dir> [--split val] [--instances <id> ...]
+    python scripts/generate_images_for_data.py [<synthesis_dir>] [--split val] [--instances <id> ...]
         [--images-dir data/docci/images] [--workers 64]
 """
 import argparse
-import json
 import os
 from functools import partial
 
 from PIL import Image
 
-from gemini_model import add_model_args, model_from_args, run_jobs
+from utils import DOCCI_DIR, INSTANCES_DIR, add_model_args, model_from_args, read_jsonl, run_jobs
 
 # Applied once to the reference image
 ENHANCEMENT_PROMPT = """Upscale the image and enhance its quality.
 Do not make any other changes to the image itself."""
 
 
-def read_jsonl(path):
-    with open(path, encoding="utf-8") as f:
-        return [json.loads(line) for line in f]
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("synthesis_dir", help="synthesis run directory with the instances.<split>.jsonl files")
+    parser.add_argument("synthesis_dir", nargs="?", default=INSTANCES_DIR,
+                        help="directory with the instances.<split>.jsonl files (default: the shipped data/docci_instances)")
     parser.add_argument("--split", default="val", choices=("train", "val", "test"))
     parser.add_argument("--instances", nargs="+", metavar="ID", help="instance ids to do instead of the whole split")
-    parser.add_argument("--images-dir", default="data/docci/images", help="DOCCI reference images, <source_id>.jpg")
+    parser.add_argument("--images-dir", default=os.path.join(DOCCI_DIR, "images"), help="DOCCI reference images, <source_id>.jpg")
     add_model_args(parser)
     args = parser.parse_args()
 

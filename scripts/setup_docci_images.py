@@ -11,30 +11,14 @@ import json
 import os
 import tarfile
 
-import requests
+from utils import DOCCI_DIR, download
 
 TARBALL_URL = "https://storage.googleapis.com/docci/data/docci_images.tar.gz"
 
 
-def download(url, dest):
-    tmp = dest + ".part"
-    done = os.path.getsize(tmp) if os.path.exists(tmp) else 0
-    headers = {"Range": f"bytes={done}-"} if done else {}
-    with requests.get(url, stream=True, timeout=60, headers=headers) as response:
-        response.raise_for_status()
-        total = done + int(response.headers.get("content-length", 0))
-        with open(tmp, "ab") as f:
-            for chunk in response.iter_content(chunk_size=1 << 20):
-                f.write(chunk)
-                done += len(chunk)
-                if done % (256 << 20) < (1 << 20):
-                    print(f"  {done / 1e9:.2f} of {total / 1e9:.2f} GB", flush=True)
-    os.replace(tmp, dest)
-
-
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data-dir", default="data/docci")
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--data-dir", default=DOCCI_DIR)
     parser.add_argument("--ids", nargs="*", help="source ids to extract (default: every source in sources.jsonl)")
     parser.add_argument("--all", action="store_true", help="extract every image in the tarball")
     args = parser.parse_args()
@@ -43,7 +27,6 @@ def main():
     images_dir = os.path.join(args.data_dir, "images")
     os.makedirs(images_dir, exist_ok=True)
     if not os.path.exists(tarball):
-        print(f"downloading {TARBALL_URL} to {tarball}")
         download(TARBALL_URL, tarball)
 
     if args.all:

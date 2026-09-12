@@ -14,7 +14,6 @@ from uaug.utils.judge import RubricJudge
 from uaug.utils.misc import read_jsonl
 from uaug.utils.schema import TaskInstance, Trajectory
 from uaug.utils.user import UserSimulator
-from uaug.utils.agents import question_cap
 from uaug.training.rollouts import assign_group_advantages, collect_trajectory
 from uaug.training.tinker import TinkerTrainer
 
@@ -26,8 +25,7 @@ class TrainingPipeline:
     instances_dir: str
     split: str
     mode: str
-    k_multiplier: Optional[int]
-    max_questions: Optional[int]
+    k_multiplier: int
     importance_weighting: str
     resume_dir: Optional[str]
     n_iterations: int
@@ -52,7 +50,7 @@ class TrainingPipeline:
     def _budget(self, instance: TaskInstance, iteration: int) -> int:
         """The instance's question cap, cut to what the user answers. Drawn once per group, so every rollout of the
         instance shares the budget and the luck of the draw stays out of the group-centred advantage."""
-        cap = question_cap(len(instance.redacted_ids), self.k_multiplier, self.max_questions)
+        cap = self.k_multiplier * len(instance.redacted_ids)
         return self.user.budget(cap, seed=f"{self.random_seed}:{iteration}:{instance.instance_id}")
 
     def _collect_batch(self, batch: List[TaskInstance], model, iteration: int, max_workers: int) -> List[Trajectory]:

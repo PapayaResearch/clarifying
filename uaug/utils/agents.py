@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Tuple
 
 from uaug.utils.schema import Completion, Turn
 from uaug.utils.wrappers import ChatModel
@@ -31,15 +31,6 @@ def parse_decision(text: str) -> bool:
     return text.strip().lower().startswith("yes")
 
 
-def question_cap(n_redacted: int, k_multiplier: Optional[int], max_questions: Optional[int]) -> int:
-    """The episode's question cap: an absolute count when set, else k_multiplier times the instance's redacted count."""
-    if max_questions is not None:
-        return max_questions
-    if k_multiplier is None:
-        raise ValueError("Set agent.max_questions or agent.k_multiplier")
-    return k_multiplier * n_redacted
-
-
 @dataclasses.dataclass
 class Asker:
     """The conversation model asking clarifying questions."""
@@ -50,12 +41,11 @@ class Asker:
     ask_prompt: str
     final_prompt: str
     decide_prompt: str
-    k_multiplier: Optional[int] = None
-    max_questions: Optional[int] = None
+    k_multiplier: int
 
     def cap(self, n_redacted: int) -> int:
-        """The episode's question cap before the user's patience is applied."""
-        return question_cap(n_redacted, self.k_multiplier, self.max_questions)
+        """The episode's question cap before the user's patience is applied: k_multiplier times the redacted count."""
+        return self.k_multiplier * n_redacted
 
     def run(
         self,
