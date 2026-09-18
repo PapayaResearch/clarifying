@@ -2,7 +2,7 @@
 
 ![Python version](https://img.shields.io/badge/python-3.12-blue)
 ![Package version](https://img.shields.io/badge/version-0.1.0-green)
-![GitHub license](https://img.shields.io/github/license/PapayaResearch/uaug)
+![GitHub license](https://img.shields.io/github/license/PapayaResearch/clarifying-questions)
 
 > [!NOTE]
 > Code for the paper **Learning to Clarify Underspecified Intents Under Limited Interaction**.
@@ -27,8 +27,8 @@ AI assistants receive requests that leave out information needed for a good outc
 Create a Python environment:
 
 ```bash
-conda create -n uaug python=3.12
-conda activate uaug
+conda create -n clarify python=3.12
+conda activate clarify
 ```
 
 install the dependencies:
@@ -57,7 +57,7 @@ Decompose each description into atomic details with an importance weight and a c
 
 ```bash
 python scripts/setup_docci.py
-python -m uaug.synthesis.run
+python -m clarify.synthesis.run
 ```
 
 **Options:**
@@ -73,7 +73,7 @@ Results are saved in `results/image-gen/docci/synthesis/LLM/k_REDACTIONS/TIMESTA
 Each iteration samples instances, collects a group of rollouts per instance against the user simulator, judges them, and takes one policy-gradient step on LoRA weights with group-centered advantages.
 
 ```bash
-python -m uaug.training.run \
+python -m clarify.training.run \
   agent=fixed-asking \
   user=patient
 ```
@@ -92,7 +92,7 @@ Results are saved in `results/image-gen/docci/training/MODEL/AGENT/USER/k_15/REW
 Run one assistant over a split and judge every episode: it sees only the request, asks questions per its asking mode, and composes a final description that the judge checks against each hidden detail.
 
 ```bash
-python -m uaug.evaluation.run \
+python -m clarify.evaluation.run \
   agent=open-asking \
   user=impatient \
   evaluation.split=test \
@@ -129,7 +129,7 @@ Figures are saved in `scripts/figures/`.
 
 ## Configuration
 
-The framework uses [Hydra](https://hydra.cc/) for configuration management. Take a look into `uaug/conf/` to see all the details and options.
+The framework uses [Hydra](https://hydra.cc/) for configuration management. Take a look into `clarify/conf/` to see all the details and options.
 
 ## Citing & Acknowledgements
 
