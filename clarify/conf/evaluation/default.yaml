@@ -1,5 +1,5 @@
 # Hydra target class
-_target_: uaug.evaluation.pipeline.EvaluationPipeline
+_target_: clarify.evaluation.pipeline.EvaluationPipeline
 
 # Synthesis results directory holding instances.<split>.jsonl
 instances_dir: ${dataset.instances_dir}

@@ -4,7 +4,7 @@ defaults:
   - _self_
 
 # Hydra target class
-_target_: uaug.training.pipeline.TrainingPipeline
+_target_: clarify.training.pipeline.TrainingPipeline
 
 # Synthesis results directory holding instances.<split>.jsonl
 instances_dir: ${dataset.instances_dir}
@@ -30,7 +30,7 @@ save_every: 5
 
 # Trainer: LoRA updates through Tinker (needs TINKER_API_KEY in .env)
 trainer:
-  _target_: uaug.training.tinker.TinkerTrainer
+  _target_: clarify.training.tinker.TinkerTrainer
   # Tinker base model to attach LoRA to
   base_model: ${model.model_id}
   # LoRA rank

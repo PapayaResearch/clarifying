@@ -6,8 +6,8 @@ import hydra
 from dotenv import load_dotenv
 from omegaconf import OmegaConf
 
-from uaug.config import Config
-from uaug.utils.misc import print_config
+from clarify.config import Config
+from clarify.utils.misc import print_config
 
 # Load environment variables from .env
 load_dotenv()

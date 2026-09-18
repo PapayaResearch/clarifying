@@ -4,8 +4,8 @@ from typing import Any, List, Optional, Type
 
 from pydantic import Field
 
-from uaug.utils.schema import TaskInstance, Turn
-from uaug.utils.wrappers import IOSchema, LanguageModel
+from clarify.utils.schema import TaskInstance, Turn
+from clarify.utils.wrappers import IOSchema, LanguageModel
 
 
 def format_conversation(request: str, turns: List[Turn]) -> str:

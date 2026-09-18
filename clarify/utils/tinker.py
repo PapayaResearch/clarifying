@@ -6,7 +6,7 @@ import tinker
 from tinker_cookbook import model_info, renderers
 from tinker_cookbook.tokenizer_utils import get_tokenizer
 
-from uaug.utils.schema import Completion
+from clarify.utils.schema import Completion
 
 
 def make_renderer(base_model: str, tokenizer, thinking: bool) -> Any:

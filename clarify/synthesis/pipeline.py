@@ -12,9 +12,9 @@ from typing import Dict, List, Optional
 
 from tqdm import tqdm
 
-from uaug.utils.schema import Detail, TaskInstance
-from uaug.utils.misc import read_jsonl, write_jsonl
-from uaug.utils.wrappers import LanguageModel
+from clarify.utils.schema import Detail, TaskInstance
+from clarify.utils.misc import read_jsonl, write_jsonl
+from clarify.utils.wrappers import LanguageModel
 
 
 @dataclasses.dataclass

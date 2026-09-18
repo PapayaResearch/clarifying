@@ -9,8 +9,8 @@ from typing import Dict, List, Optional, Type
 import litellm
 from pydantic import BaseModel
 
-from uaug.utils.schema import Completion
-from uaug.utils.tinker import TinkerModel, load_model
+from clarify.utils.schema import Completion
+from clarify.utils.tinker import TinkerModel, load_model
 
 # Suppress litellm info messages
 litellm.suppress_debug_info = True

@@ -6,5 +6,5 @@ defaults:
 name: impatient
 # Questions answered before the user asks for the result: T over 1..cap with P(T <= t) = (t / cap)^shape
 patience:
-  _target_: uaug.utils.user.PowerPatience
+  _target_: clarify.utils.user.PowerPatience
   shape: 1.5

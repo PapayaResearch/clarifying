@@ -1,12 +1,12 @@
 import statistics
 from typing import Dict, List
 
-from uaug.utils.judge import RubricJudge
-from uaug.utils.schema import AgentTurn, Completion, Episode, TaskInstance, Trajectory, Turn
-from uaug.utils.agents import build_chat_messages, build_transcript_messages, parse_decision
-from uaug.utils.tinker import TinkerModel
-from uaug.utils.user import UserSimulator
-from uaug.training.rewards import RewardFn, total_reward
+from clarify.utils.judge import RubricJudge
+from clarify.utils.schema import AgentTurn, Completion, Episode, TaskInstance, Trajectory, Turn
+from clarify.utils.agents import build_chat_messages, build_transcript_messages, parse_decision
+from clarify.utils.tinker import TinkerModel
+from clarify.utils.user import UserSimulator
+from clarify.training.rewards import RewardFn, total_reward
 
 
 def collect_trajectory(

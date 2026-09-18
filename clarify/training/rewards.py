@@ -1,7 +1,7 @@
 import abc
 import dataclasses
 
-from uaug.utils.schema import Episode, JudgeResult
+from clarify.utils.schema import Episode, JudgeResult
 
 
 class RewardFn(abc.ABC):

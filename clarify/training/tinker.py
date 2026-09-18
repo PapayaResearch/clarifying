@@ -6,8 +6,8 @@ from typing import Any, Dict, List
 
 import tinker
 
-from uaug.utils.schema import Trajectory
-from uaug.utils.tinker import TinkerModel, make_renderer, make_sampling_params
+from clarify.utils.schema import Trajectory
+from clarify.utils.tinker import TinkerModel, make_renderer, make_sampling_params
 
 
 @dataclasses.dataclass

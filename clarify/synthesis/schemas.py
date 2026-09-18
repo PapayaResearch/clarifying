@@ -2,7 +2,7 @@ from typing import List, Literal, Type
 
 from pydantic import BaseModel, Field
 
-from uaug.utils.wrappers import IOSchema
+from clarify.utils.wrappers import IOSchema
 
 
 def decompose_input_schema(text_description: str) -> Type[IOSchema]:

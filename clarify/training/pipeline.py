@@ -10,12 +10,12 @@ from typing import Any, List, Optional
 
 from tqdm import tqdm
 
-from uaug.utils.judge import RubricJudge
-from uaug.utils.misc import read_jsonl
-from uaug.utils.schema import TaskInstance, Trajectory
-from uaug.utils.user import UserSimulator
-from uaug.training.rollouts import assign_group_advantages, collect_trajectory
-from uaug.training.tinker import TinkerTrainer
+from clarify.utils.judge import RubricJudge
+from clarify.utils.misc import read_jsonl
+from clarify.utils.schema import TaskInstance, Trajectory
+from clarify.utils.user import UserSimulator
+from clarify.training.rollouts import assign_group_advantages, collect_trajectory
+from clarify.training.tinker import TinkerTrainer
 
 
 @dataclasses.dataclass

@@ -1,5 +1,5 @@
 # Hydra target class
-_target_: uaug.utils.agents.Asker
+_target_: clarify.utils.agents.Asker
 # Agent name recorded in results
 name: fixed-asking
 # Fixed mode: the model asks exactly as many questions as the cap

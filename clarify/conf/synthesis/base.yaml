@@ -20,14 +20,14 @@ resume_path: null
 
 # Decomposer: full specification -> atomic details with category/importance/check
 decomposer:
-  _target_: uaug.utils.wrappers.LanguageModel
+  _target_: clarify.utils.wrappers.LanguageModel
   system_prompt: ${task.decompose_prompt}
   input_schema:
-    _target_: uaug.synthesis.schemas.decompose_input_schema
+    _target_: clarify.synthesis.schemas.decompose_input_schema
     text_description: |
       The complete, fully-specified text to decompose.
   output_schema:
-    _target_: uaug.synthesis.schemas.decompose_output_schema
+    _target_: clarify.synthesis.schemas.decompose_output_schema
     categories: ${task.categories}
     details_description: |
       Every concrete fact in the text, one atomic detail each.
@@ -43,16 +43,16 @@ decomposer:
 
 # Eroder: original description + redacted details -> natural underspecified user request
 eroder:
-  _target_: uaug.utils.wrappers.LanguageModel
+  _target_: clarify.utils.wrappers.LanguageModel
   system_prompt: ${task.erode_prompt}
   input_schema:
-    _target_: uaug.synthesis.schemas.erode_input_schema
+    _target_: clarify.synthesis.schemas.erode_input_schema
     description_description: |
       The complete, fully-specified original description.
     redacted_description: |
       The details to remove, none of them may survive into the request.
   output_schema:
-    _target_: uaug.synthesis.schemas.erode_output_schema
+    _target_: clarify.synthesis.schemas.erode_output_schema
     request_description: |
       Natural 1-3 sentence user request stating everything in the description except the redacted details.
   api_call: ${llm}

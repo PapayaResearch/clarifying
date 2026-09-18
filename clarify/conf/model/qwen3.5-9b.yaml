@@ -1,5 +1,5 @@
 ﻿# Hydra target class
-_target_: uaug.utils.wrappers.ChatModel
+_target_: clarify.utils.wrappers.ChatModel
 # Display name (used in result/log paths)
 name: qwen3.5-9b
 # Model identifier (HF model id, sampled via Tinker)

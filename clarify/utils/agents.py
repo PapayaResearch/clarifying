@@ -1,9 +1,9 @@
 import dataclasses
 from typing import Callable, Dict, List, Tuple
 
-from uaug.utils.schema import Completion, Turn
-from uaug.utils.wrappers import ChatModel
-from uaug.utils.user import format_conversation
+from clarify.utils.schema import Completion, Turn
+from clarify.utils.wrappers import ChatModel
+from clarify.utils.user import format_conversation
 
 
 def build_transcript_messages(system_prompt: str, request: str, turns: List[Turn]) -> List[Dict[str, str]]:

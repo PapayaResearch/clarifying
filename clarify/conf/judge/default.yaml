@@ -1,17 +1,17 @@
 # Hydra target class
-_target_: uaug.utils.judge.RubricJudge
+_target_: clarify.utils.judge.RubricJudge
 # The rubric checker: one yes/no verdict per (check, text) pair
 checker:
-  _target_: uaug.utils.wrappers.LanguageModel
+  _target_: clarify.utils.wrappers.LanguageModel
   system_prompt: ${task.judge_prompt}
   input_schema:
-    _target_: uaug.utils.judge.check_input_schema
+    _target_: clarify.utils.judge.check_input_schema
     check_description: |
       The yes/no question about the text to verify.
     text_description: |
       The only text to judge the check against.
   output_schema:
-    _target_: uaug.utils.judge.check_output_schema
+    _target_: clarify.utils.judge.check_output_schema
     satisfied_description: |
       Whether the text states or clearly entails the fact.
   api_call: ${llm}

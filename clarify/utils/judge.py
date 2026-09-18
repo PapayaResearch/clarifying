@@ -4,8 +4,8 @@ from typing import Type
 
 from pydantic import Field
 
-from uaug.utils.schema import Episode, JudgeResult, TaskInstance
-from uaug.utils.wrappers import IOSchema, LanguageModel
+from clarify.utils.schema import Episode, JudgeResult, TaskInstance
+from clarify.utils.wrappers import IOSchema, LanguageModel
 
 
 def check_input_schema(check_description: str, text_description: str) -> Type[IOSchema]:

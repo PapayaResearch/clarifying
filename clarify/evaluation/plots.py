@@ -7,8 +7,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from uaug.utils.misc import clairvoyant_u_rec
-from uaug.utils.schema import Episode, JudgeResult, TaskInstance
+from clarify.utils.misc import clairvoyant_u_rec
+from clarify.utils.schema import Episode, JudgeResult, TaskInstance
 
 
 def write_plots(results_dir: str, episodes: List[Episode], judgments: List[JudgeResult],

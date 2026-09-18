@@ -1,5 +1,5 @@
 # Hydra target class
-_target_: uaug.utils.agents.Asker
+_target_: clarify.utils.agents.Asker
 # Agent name recorded in results
 name: open-asking
 # Dynamic mode: before each question the model decides whether to ask one more, up to the cap
