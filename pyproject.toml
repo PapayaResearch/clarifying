@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "clarify"
 version = "0.1.0"
-description = "The User-Agent Utility Gap: measuring and reducing the communication gap via trained clarifying questions"
+description = "Learning to Clarify Underspecified Intents Under Limited Interaction"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
