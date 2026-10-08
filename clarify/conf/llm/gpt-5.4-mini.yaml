@@ -1,0 +1,8 @@
+# Hydra target factory
+_target_: clarify.utils.api.create_api_call
+# litellm model identifier (needs OPENAI_API_KEY in .env)
+model: openai/gpt-5.4-mini
+# Seconds to sleep before each call (rate limiting)
+delay: 0
+# Extra litellm completion parameters
+params: {}

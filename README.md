@@ -11,17 +11,6 @@ AI assistants receive requests that leave out information needed for a good outc
 
 <img width="1858" alt="banner" src="assets/main_figure.png" />
 
-## Features
-
-- 🧩 Instance synthesis from hyper-detailed image descriptions (DOCCI): decompose into atomic details, redact a fixed or variable number of them, and rewrite the rest as a natural request
-- 🗣️ Privileged user simulators that answer only what is asked, with patient and impatient stopping behavior
-- 🎯 Asking modes: no-asking, fixed-asking, and open-asking
-- 🏋️ RL fine-tuning of the asking policy with group-centered policy gradients and LoRA through the Tinker API
-- ⚖️ Rubric judge scoring the recovered utility per hidden detail
-- 🖼️ Image generation for references, requests, and final descriptions with Gemini
-- 🤖 Support for multiple orchestration LLMs through LiteLLM and base models through Tinker
-- ⚙️ Hydra-based configuration system for reproducible experiments
-
 ## Installation
 
 Create a Python environment:
@@ -40,13 +29,13 @@ uv pip install -e .
 
 and create a `.env` file in the project root with your API keys:
 
-> [!IMPORTANT]
-> You must include a Gemini key (the environment LLM and image generation) and a Tinker key (the assistant model and RL training).
-
 ```bash
-GEMINI_API_KEY="<YOUR_GEMINI_KEY>"
 TINKER_API_KEY="<YOUR_TINKER_KEY>"
+GEMINI_API_KEY="<YOUR_GEMINI_KEY>"
 ```
+
+> [!IMPORTANT]
+> You need a Tinker key (the assistant model and RL training) and a key for the environment LLM, which plays the simulated user, the judge and the redaction models. The paper uses Gemini 3.5 Flash Lite as the environment LLM, so a Gemini key is needed to fully replicate its results.
 
 > [!NOTE]
 > All commands run from the repository root. The instances of the paper ship in `data/docci_instances/` and its 15 evaluations in `paper_results/`, and every command uses them by default.
@@ -64,7 +53,7 @@ python -m clarify.synthesis.run
 - `synthesis`: variable-redactions (1 to `k` details per instance), fixed-redactions (exactly `k`)
 - `general.k`: maximum (or fixed) number of redacted details (default: 15)
 - `synthesis.num_sources`: number of sources to process (null for all)
-- `llm`: gemini-3.5-flash-lite, gemini-3.8-flash
+- `llm`: environment LLM for the decomposer and the eroder (default: gemini-3.5-flash-lite)
 
 Results are saved in `results/image-gen/docci/synthesis/LLM/k_REDACTIONS/TIMESTAMP`, with `instances.{train,val,test}.jsonl` and a `synthesis_report.json`.
 
@@ -82,6 +71,7 @@ python -m clarify.training.run \
 - `agent`: fixed-asking (one question per hidden detail), open-asking (the model decides when to stop)
 - `user`: patient (answers every question), impatient (stops after a random number of them)
 - `model`: qwen3-8b, qwen3.5-9b
+- `llm`: environment LLM for the user simulator and the judge (default: gemini-3.5-flash-lite)
 - `training.instances_dir`: instances to train on (default: data/docci_instances)
 - `training.n_iterations`: number of iterations, one gradient step each (default: 300)
 
@@ -103,12 +93,16 @@ python -m clarify.evaluation.run \
 - `agent`: no-asking, fixed-asking, open-asking
 - `user`: patient, impatient
 - `evaluation.split`: val, test
+- `llm`: environment LLM for the user simulator and the judge (default: gemini-3.5-flash-lite)
 - `evaluation.instances_dir`: instances to evaluate on (default: data/docci_instances)
 - `model.checkpoint`: Tinker sampler path from `checkpoints.jsonl` (omit for the base weights)
 
 Results are saved in `results/image-gen/docci/evaluation/MODEL/AGENT/USER/k_15/SPLIT/CHECKPOINT/TIMESTAMP`, with `episodes.jsonl`, `judgments.jsonl`, a one-row `summary.csv`, and recovery plots.
 
 ## Images & Figures
+
+> [!NOTE]
+> The scripts below render pictures with Gemini's image model (Nano Banana), so they need `GEMINI_API_KEY` in `.env` to run. The paper's images were produced with Gemini 3.1 Flash Image.
 
 Render the reference, request and final images with Gemini:
 
