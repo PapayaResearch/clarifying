@@ -35,7 +35,7 @@ GEMINI_API_KEY="<YOUR_GEMINI_KEY>"
 ```
 
 > [!IMPORTANT]
-> You need a Tinker key (the assistant model and RL training) and a key for the environment LLM, which plays the simulated user, the judge and the redaction models. The paper uses Gemini 3.5 Flash Lite as the environment LLM, so a Gemini key is needed to fully replicate its results.
+> You need a Tinker key (the assistant model and RL training) and a key for the environment LLM, which plays the simulated user, the judge and the decomposition and redaction models. The paper uses Gemini 3.5 Flash-Lite as the environment LLM, so a Gemini key is needed to fully replicate its results. Any other provider supported by [LiteLLM](https://docs.litellm.ai/docs/providers) works as well, just choose its model with the `llm` option and add an API key to `.env`.
 
 > [!NOTE]
 > All commands run from the repository root. The data used in the paper is in `data/docci_instances/`, and every command uses it by default.
@@ -53,7 +53,7 @@ python -m clarify.synthesis.run
 - `synthesis`: variable-redactions (1 to `k` details per instance), fixed-redactions (exactly `k`)
 - `general.k`: maximum (or fixed) number of redacted details (default: 15)
 - `synthesis.num_sources`: number of sources to process (null for all)
-- `llm`: environment LLM for the decomposer and the eroder (default: gemini-3.5-flash-lite)
+- `llm`: environment LLM for the decomposition and redaction models (default: gemini-3.5-flash-lite)
 
 Results are saved in `results/image-gen/docci/synthesis/LLM/k_REDACTIONS/TIMESTAMP`, with `instances.{train,val,test}.jsonl` and a `synthesis_report.json`.
 
@@ -68,7 +68,7 @@ python -m clarify.training.run \
 ```
 
 **Options:**
-- `agent`: fixed-asking (one question per hidden detail), open-asking (the model decides when to stop)
+- `agent`: fixed-asking (one question per hidden detail), open-asking (the assistant decides when to stop)
 - `user`: patient (answers every question), impatient (stops after a random number of them)
 - `model`: qwen3-8b, qwen3.5-9b
 - `llm`: environment LLM for the user simulator and the judge (default: gemini-3.5-flash-lite)
@@ -135,7 +135,7 @@ The two assistants of the paper, Qwen3-8B trained against the patient user and a
 aws s3 sync s3://clarifying-questions/assistants/ assistants/ --no-sign-request
 ```
 
-They are LoRA adapters in [PEFT](https://huggingface.co/docs/peft) format, `patient_trained` and `impatient_trained`, to load on `Qwen/Qwen3-8B` with [`PeftModel.from_pretrained`](https://huggingface.co/docs/peft/main/en/package_reference/peft_model#peft.PeftModel.from_pretrained) for inference outside Tinker.
+They are LoRA adapters in [PEFT](https://huggingface.co/docs/peft) format, `patient_trained` and `impatient_trained`, to load on `Qwen/Qwen3-8B` for inference outside Tinker.
 
 ## Configuration
 
