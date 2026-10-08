@@ -2,7 +2,7 @@
 
 ![Python version](https://img.shields.io/badge/python-3.12-blue)
 ![Package version](https://img.shields.io/badge/version-0.1.0-green)
-![GitHub license](https://img.shields.io/github/license/PapayaResearch/clarifying-questions)
+![GitHub license](https://img.shields.io/github/license/PapayaResearch/clarifying)
 
 > [!NOTE]
 > Code for the paper **[Learning to Clarify Underspecified Intents Under Limited Interaction](https://arxiv.org/abs/2610.04719)**.
@@ -38,7 +38,7 @@ GEMINI_API_KEY="<YOUR_GEMINI_KEY>"
 > You need a Tinker key (the assistant model and RL training) and a key for the environment LLM, which plays the simulated user, the judge and the redaction models. The paper uses Gemini 3.5 Flash Lite as the environment LLM, so a Gemini key is needed to fully replicate its results.
 
 > [!NOTE]
-> All commands run from the repository root. The instances of the paper ship in `data/docci_instances/` and its 15 evaluations in `paper_results/`, and every command uses them by default.
+> All commands run from the repository root. The data used in the paper is in `data/docci_instances/`, and every command uses it by default.
 
 ## Synthesis
 
@@ -99,10 +99,16 @@ python -m clarify.evaluation.run \
 
 Results are saved in `results/image-gen/docci/evaluation/MODEL/AGENT/USER/k_15/SPLIT/CHECKPOINT/TIMESTAMP`, with `episodes.jsonl`, `judgments.jsonl`, a one-row `summary.csv`, and recovery plots.
 
-## Images & Figures
+## Images & Analysis
+
+The scripts below default to the 15 evaluations of the paper, which can be downloaded using the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html):
+
+```bash
+aws s3 sync s3://clarifying-questions/results/ paper_results/ --no-sign-request
+```
 
 > [!NOTE]
-> The scripts below render pictures with Gemini's image model (Nano Banana), so they need `GEMINI_API_KEY` in `.env` to run. The paper's images were produced with Gemini 3.1 Flash Image.
+> The scripts render pictures with Gemini 3.1 Flash Image, so they need `GEMINI_API_KEY` in `.env` to run.
 
 Render the reference, request and final images with Gemini:
 
@@ -120,6 +126,16 @@ python scripts/visualize_instance.py INSTANCE_ID
 ```
 
 Figures are saved in `scripts/figures/`.
+
+## Trained Assistants
+
+The two assistants of the paper, Qwen3-8B trained against the patient user and against the impatient user, can be downloaded into `assistants/` the same way:
+
+```bash
+aws s3 sync s3://clarifying-questions/assistants/ assistants/ --no-sign-request
+```
+
+They are LoRA adapters in [PEFT](https://huggingface.co/docs/peft) format, `patient_trained` and `impatient_trained`, to load on `Qwen/Qwen3-8B` with [`PeftModel.from_pretrained`](https://huggingface.co/docs/peft/main/en/package_reference/peft_model#peft.PeftModel.from_pretrained) for inference outside Tinker.
 
 ## Configuration
 

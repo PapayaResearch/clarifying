@@ -26,7 +26,7 @@ ROOT = os.path.dirname(SCRIPTS)
 FIGURES = os.path.join(SCRIPTS, "figures")  # where the figure scripts write by default
 DOCCI_DIR = os.path.join(ROOT, "data", "docci")  # the DOCCI descriptions and reference images (setup_docci*.py)
 INSTANCES_DIR = os.path.join(ROOT, "data", "docci_instances")  # the paper's instances and their images
-PAPER_RESULTS = os.path.join(ROOT, "paper_results", "qwen3-8b-thinking")  # the paper's evaluation runs, shipped without config.yaml
+PAPER_RESULTS = os.path.join(ROOT, "paper_results", "qwen3-8b-thinking")  # the paper's evaluation runs, synced from S3 (see README)
 WEIGHTS = {"base_model": "base", "patient_trained": "patient", "impatient_trained": "impatient"}  # their folder names to run labels
 
 # Colors shared by the figures
