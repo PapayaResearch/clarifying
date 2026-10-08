@@ -5,7 +5,7 @@
 ![GitHub license](https://img.shields.io/github/license/PapayaResearch/clarifying-questions)
 
 > [!NOTE]
-> Code for the paper **Learning to Clarify Underspecified Intents Under Limited Interaction**.
+> Code for the paper **[Learning to Clarify Underspecified Intents Under Limited Interaction](https://arxiv.org/abs/2610.04719)**.
 
 AI assistants receive requests that leave out information needed for a good outcome, for example about users' preferences or goals. They must then either speculate or ask for more information before proceeding. We reconceptualize this as a value-of-information problem: the assistant should acquire information whose absence causes the greatest avoidable loss in user utility. This is rarely known *ex ante*; rather, assistants must *predict* it in order to optimally allocate limited user interactions. We instantiate this problem in image generation and derive a reinforcement learning framework using multi-turn simulated users to maximize utility recovery under uncertainty. In a preregistered study with 456 interactive sessions across 76 human participants, this helped users significantly better match reference images with significantly fewer questions, less total interaction time, and lower cost. This points toward a simple and scalable framework for training language model assistants to better disambiguate user intent by asking more informative questions.
 
@@ -130,5 +130,12 @@ The framework uses [Hydra](https://hydra.cc/) for configuration management. Take
 If you use this code in your research, please cite the following paper:
 
 ```bibtex
-TEMPORARY: add bibtex here
+@article{mr2024clarifying,
+  title     = {Learning to Clarify Underspecified Intents Under Limited Interaction},
+  author    = {M R, Pranav and Cherep, Manuel and Maes, Pattie and Singh, Nikhil},
+  year      = {2026},
+  url       = {https://arxiv.org/abs/2610.04719}
+}
 ```
+
+We received funding from SK Telecom with MIT’s Generative AI Impact Consortium (MGAIC). Research reported in this publication was supported by an Amazon Research Award, Fall 2024. Experiments conducted in this paper were generously supported via API credits provided by Thinking Machines and Google. MC is supported by a fellowship from “la Caixa” Foundation (ID 100010434) with code LCF/BQ/EU23/12010079. The authors acknowledge the MIT Office of Research Computing and Data for providing high performance computing resources that have contributed to the research results reported within this paper.
