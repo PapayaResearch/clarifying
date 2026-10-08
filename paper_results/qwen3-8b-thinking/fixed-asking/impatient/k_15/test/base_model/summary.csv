@@ -1,2 +1,0 @@
-agent,mode,user,split,n_episodes,u_rec_llm_mean,u_rec_equal_mean,clairvoyant_llm_mean,clairvoyant_equal_mean,n_questions_mean,budget_mean,planning_gap_mean
-fixed-asking,fixed,impatient,test,78,0.294,0.284,0.718,0.677,5.63,5.63,-2.92
