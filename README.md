@@ -101,10 +101,31 @@ Results are saved in `results/image-gen/docci/evaluation/MODEL/AGENT/USER/k_15/S
 
 ## Images & Analysis
 
-The scripts below default to the 15 evaluations of the paper, which can be downloaded using the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html):
+The scripts below default to the 15 evaluations of the paper, hosted on AWS S3. To download them all into `paper_results/`:
 
 ```bash
-aws s3 sync s3://clarifying-questions/results/ paper_results/ --no-sign-request
+BASE="https://clarifying-questions.s3.amazonaws.com"
+
+download_run() {
+  prefix="results/qwen3-8b-thinking/$1/$2/k_15/test/$3"
+  outdir="paper_results/${prefix#results/}"
+  mkdir -p "${outdir}/images"
+  echo "Downloading ${prefix}"
+  for f in episodes.jsonl judgments.jsonl summary.csv; do
+    curl -fL -o "${outdir}/${f}" "${BASE}/${prefix}/${f}"
+  done
+  grep -o '"instance_id": "[^"]*"' "${outdir}/episodes.jsonl" | cut -d'"' -f4 | while read -r id; do
+    curl -fsSL -o "${outdir}/images/${id}.jpg" "${BASE}/${prefix}/images/${id}.jpg"
+  done
+}
+
+for weights in base_model patient_trained impatient_trained; do
+  download_run no-asking patient "$weights"
+  download_run fixed-asking patient "$weights"
+  download_run fixed-asking impatient "$weights"
+  download_run open-asking patient "$weights"
+  download_run open-asking impatient "$weights"
+done
 ```
 
 > [!NOTE]
@@ -129,13 +150,25 @@ Figures are saved in `scripts/figures/`.
 
 ## Trained Assistants
 
-The two assistants of the paper, Qwen3-8B trained against the patient user and against the impatient user, can be downloaded into `assistants/` the same way:
+The two assistants of the paper, Qwen3-8B trained against the patient user and against the impatient user, are LoRA adapters in [PEFT](https://huggingface.co/docs/peft) format to load on `Qwen/Qwen3-8B` for inference outside Tinker, hosted on AWS S3 (cfg = `adapter_config.json`, w = `adapter_model.safetensors`):
+
+| Assistant           | Trained against | Files |
+| ------------------- | --------------- | ----- |
+| `patient_trained`   | patient user    | [cfg](https://clarifying-questions.s3.amazonaws.com/assistants/patient_trained/adapter_config.json) [w](https://clarifying-questions.s3.amazonaws.com/assistants/patient_trained/adapter_model.safetensors) |
+| `impatient_trained` | impatient user  | [cfg](https://clarifying-questions.s3.amazonaws.com/assistants/impatient_trained/adapter_config.json) [w](https://clarifying-questions.s3.amazonaws.com/assistants/impatient_trained/adapter_model.safetensors) |
+
+To download both into `assistants/`:
 
 ```bash
-aws s3 sync s3://clarifying-questions/assistants/ assistants/ --no-sign-request
-```
+BASE="https://clarifying-questions.s3.amazonaws.com"
 
-They are LoRA adapters in [PEFT](https://huggingface.co/docs/peft) format, `patient_trained` and `impatient_trained`, to load on `Qwen/Qwen3-8B` for inference outside Tinker.
+for user in patient impatient; do
+  mkdir -p "assistants/${user}_trained"
+  for f in adapter_config.json adapter_model.safetensors; do
+    curl -fL -o "assistants/${user}_trained/${f}" "${BASE}/assistants/${user}_trained/${f}"
+  done
+done
+```
 
 ## Configuration
 
