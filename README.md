@@ -27,7 +27,7 @@ pip install uv
 uv pip install -e .
 ```
 
-and create a `.env` file in the project root with your API keys:
+and copy `.env.example` to `.env` with your API keys:
 
 ```bash
 TINKER_API_KEY="<YOUR_TINKER_KEY>"
@@ -101,45 +101,14 @@ Results are saved in `results/image-gen/docci/evaluation/MODEL/AGENT/USER/k_15/S
 
 ## Images & Analysis
 
-The scripts below default to the 15 evaluations of the paper, hosted on AWS S3. To download them all into `paper_results/`:
+The scripts below default to the 15 evaluations of the paper, hosted on AWS S3. To download them into `paper_results/`:
 
 ```bash
-BASE="https://clarifying-questions.s3.amazonaws.com"
-
-download_run() {
-  prefix="results/qwen3-8b-thinking/$1/$2/k_15/test/$3"
-  outdir="paper_results/${prefix#results/}"
-  mkdir -p "${outdir}/images"
-  echo "Downloading ${prefix}"
-  for f in episodes.jsonl judgments.jsonl summary.csv; do
-    curl -fL -o "${outdir}/${f}" "${BASE}/${prefix}/${f}"
-  done
-  grep -o '"instance_id": "[^"]*"' "${outdir}/episodes.jsonl" | cut -d'"' -f4 | while read -r id; do
-    curl -fsSL -o "${outdir}/images/${id}.jpg" "${BASE}/${prefix}/images/${id}.jpg"
-  done
-}
-
-for weights in base_model patient_trained impatient_trained; do
-  download_run no-asking patient "$weights"
-  download_run fixed-asking patient "$weights"
-  download_run fixed-asking impatient "$weights"
-  download_run open-asking patient "$weights"
-  download_run open-asking impatient "$weights"
-done
+curl -f -C - -O https://clarifying-questions.s3.amazonaws.com/paper_results.tar.gz
+tar xzf paper_results.tar.gz
 ```
 
-> [!NOTE]
-> The scripts render pictures with Gemini 3.1 Flash Image, so they need `GEMINI_API_KEY` in `.env` to run.
-
-Render the reference, request and final images with Gemini:
-
-```bash
-python scripts/setup_docci_images.py
-python scripts/generate_images_for_data.py --split test
-python scripts/generate_images_for_eval.py
-```
-
-Make the figures of the paper from its evaluations (pass an evaluation directory to use another):
+Visualizations for instances from the paper can be made right away (pass an evaluation directory to use another):
 
 ```bash
 python scripts/visualize_images.py
@@ -148,9 +117,20 @@ python scripts/visualize_instance.py INSTANCE_ID
 
 Figures are saved in `scripts/figures/`.
 
+To make figures of your own synthesis and evaluation runs, render their images first:
+
+```bash
+python scripts/setup_docci_images.py
+python scripts/generate_images_for_data.py SYNTHESIS_DIR --split test
+python scripts/generate_images_for_eval.py EVALUATION_DIR
+```
+
+> [!NOTE]
+> The scripts render pictures with Gemini 3.1 Flash Image, so they need `GEMINI_API_KEY` in `.env` to run.
+
 ## Trained Assistants
 
-The two assistants of the paper, Qwen3-8B trained against the patient user and against the impatient user, are LoRA adapters in [PEFT](https://huggingface.co/docs/peft) format to load on `Qwen/Qwen3-8B` for inference outside Tinker, hosted on AWS S3 (cfg = `adapter_config.json`, w = `adapter_model.safetensors`):
+The two assistants of the paper are LoRA adapters in [PEFT](https://huggingface.co/docs/peft) format to load on `Qwen/Qwen3-8B` for inference outside Tinker, hosted on AWS S3 (cfg = `adapter_config.json`, w = `adapter_model.safetensors`):
 
 | Assistant           | Trained against | Files |
 | ------------------- | --------------- | ----- |
@@ -165,7 +145,7 @@ BASE="https://clarifying-questions.s3.amazonaws.com"
 for user in patient impatient; do
   mkdir -p "assistants/${user}_trained"
   for f in adapter_config.json adapter_model.safetensors; do
-    curl -fL -o "assistants/${user}_trained/${f}" "${BASE}/assistants/${user}_trained/${f}"
+    curl -f -C - -o "assistants/${user}_trained/${f}" "${BASE}/assistants/${user}_trained/${f}"
   done
 done
 ```
@@ -179,7 +159,7 @@ The framework uses [Hydra](https://hydra.cc/) for configuration management. Take
 If you use this code in your research, please cite the following paper:
 
 ```bibtex
-@article{mr2024clarifying,
+@article{mr2026clarifying,
   title     = {Learning to Clarify Underspecified Intents Under Limited Interaction},
   author    = {M R, Pranav and Cherep, Manuel and Maes, Pattie and Singh, Nikhil},
   year      = {2026},
