@@ -167,4 +167,4 @@ If you use this code in your research, please cite the following paper:
 }
 ```
 
-We received funding from SK Telecom with MIT’s Generative AI Impact Consortium (MGAIC). Research reported in this publication was supported by an Amazon Research Award, Fall 2024. Experiments conducted in this paper were generously supported via API credits provided by Thinking Machines and Google. MC is supported by a fellowship from “la Caixa” Foundation (ID 100010434) with code LCF/BQ/EU23/12010079. The authors acknowledge the MIT Office of Research Computing and Data for providing high performance computing resources that have contributed to the research results reported within this paper.
+Research reported in this publication was generously supported via API credits provided by Thinking Machines and Google.
